@@ -1,8 +1,3 @@
-/*
- * @Author: 刘书记
- * @Date: 2026-09-20 17:53:29
- * @Description: 努力搬砖的小花花
- */
 import type { BotConfig, SkillBinding } from "@ml-aos/shared";
 
 /** Compose system instructions + skill load rules + task (agent-os style). */
