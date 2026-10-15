@@ -1,0 +1,49 @@
+# Dependencies & build
+node_modules/
+dist/
+**/dist/
+**/src-tauri/target/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Secrets & local runtime data
+.env
+.env.*
+!.env.example
+data/
+**/data/
+packages/runtime/data/
+
+# Local Gitee allowlist (example is committed)
+config/gitee-projects.json
+
+# Private / internal working docs (not for the public repo)
+docs/
+.superpowers/
+.superdesign/
+
+# OS & editor junk
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*~
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# Test / tool caches
+.turbo/
+tmp/
+tmp-*.js
+.cache/
+
+# Desktop installer resources (filled by `pnpm prepare:bundle` / `build:desktop`)
+apps/desktop/src-tauri/resources/runtime/
+apps/desktop/src-tauri/resources/node/node.exe
+apps/desktop/src-tauri/resources/node/node
+apps/desktop/src-tauri/resources/node/VERSION
+apps/desktop/src-tauri/app-icon.png
+apps/desktop/src-tauri/target/
+
