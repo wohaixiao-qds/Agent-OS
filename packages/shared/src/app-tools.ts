@@ -59,13 +59,15 @@ const QuestionSchema = z
     }
   });
 
-export const ClarificationRequestSchema = z
-  .object({
-    title: z.string().trim().min(1).max(80).default("需求确认"),
-    intro: z.string().trim().max(300).optional().default(""),
-    questions: z.array(QuestionSchema).min(1).max(5),
-  })
-  .superRefine((request, ctx) => {
+// 同 acceptance.ts：MCP 注册用对象型 ToolSchema，交叉校验用带 refine 的严格版。
+export const ClarificationRequestToolSchema = z.object({
+  title: z.string().trim().min(1).max(80).default("需求确认"),
+  intro: z.string().trim().max(300).optional().default(""),
+  questions: z.array(QuestionSchema).min(1).max(5),
+});
+
+export const ClarificationRequestSchema = ClarificationRequestToolSchema.superRefine(
+  (request, ctx) => {
     const ids = request.questions.map((question) => question.id);
     if (new Set(ids).size !== ids.length) {
       ctx.addIssue({
@@ -74,7 +76,8 @@ export const ClarificationRequestSchema = z
         path: ["questions"],
       });
     }
-  });
+  },
+);
 
 export type ClarificationRequest = z.infer<typeof ClarificationRequestSchema>;
 
@@ -120,6 +123,16 @@ export const ProductSpecRequestSchema = z.discriminatedUnion("deliveryMode", [
 ]);
 
 export type ProductSpecRequest = z.infer<typeof ProductSpecRequestSchema>;
+
+// discriminatedUnion 在 MCP SDK 里也渲染成空参数；注册用扁平 object，字段校验仍走上面的 union。
+export const ProductSpecRequestToolSchema = z.object({
+  deliveryMode: z.enum(["local", "lark-doc"]),
+  title: z.string().trim().min(1).max(80),
+  summary: z.string().trim().min(1).max(500),
+  specPath: WorkspacePathSchema.optional(),
+  ticketsPath: WorkspacePathSchema.optional(),
+  documentUrl: z.string().url().optional(),
+});
 
 export const ApprovalRequestSchema = z.object({
   operation: z.string().trim().min(1).max(120),
@@ -181,6 +194,30 @@ export const ScheduleManageRequestSchema = z.discriminatedUnion("action", [
 ]);
 
 export type ScheduleManageRequest = z.infer<typeof ScheduleManageRequestSchema>;
+
+// 同上：注册用扁平 object（按 action 组合的字段全部可选），严格组合校验走上面的 union。
+export const ScheduleManageRequestToolSchema = z.object({
+  action: z.enum([
+    "list",
+    "add",
+    "addMany",
+    "update",
+    "remove",
+    "removeMany",
+    "removeAll",
+    "run",
+    "pause",
+    "resume",
+    "logs",
+  ]),
+  targetBotId: BotIdSchema.optional(),
+  prompt: z.string().trim().min(1).max(2000).optional(),
+  rule: ScheduleRuleSchema.optional(),
+  schedules: z.array(ScheduleAddSchema).min(1).max(20).optional(),
+  id: z.string().trim().min(1).max(64).optional(),
+  ids: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
+  confirm: z.literal(true).optional(),
+});
 
 function lastParsed<T>(
   toolCalls: ToolCallRecord[] | undefined,

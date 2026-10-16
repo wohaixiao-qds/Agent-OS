@@ -7,12 +7,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  AcceptanceSubmissionSchema,
+  AcceptanceSubmissionToolSchema,
   ApprovalRequestSchema,
-  ClarificationRequestSchema,
+  ClarificationRequestToolSchema,
   DispatchTaskRequestSchema,
-  ProductSpecRequestSchema,
+  ProductSpecRequestToolSchema,
   ScheduleManageRequestSchema,
+  ScheduleManageRequestToolSchema,
 } from "@zy-aos/shared";
 
 const server = new McpServer({
@@ -63,7 +64,7 @@ server.registerTool(
     title: "向用户提问",
     description:
       "向用户展示确认卡并等待点选。一次 1 到 5 题，每题 2 到 4 个选项。调用后停止，不要自行补答案。",
-    inputSchema: ClarificationRequestSchema,
+    inputSchema: ClarificationRequestToolSchema,
   },
   async (args) => {
     const n = Array.isArray(args?.questions) ? args.questions.length : 0;
@@ -88,7 +89,7 @@ server.registerTool(
     title: "提交产品方案",
     description:
       "产品方案写完后提交待确认产物。桌面默认 deliveryMode=local，并给出已存在的 specPath 与 ticketsPath。调用后停止。",
-    inputSchema: ProductSpecRequestSchema,
+    inputSchema: ProductSpecRequestToolSchema,
   },
   async () => ok("产品方案已交给 ZY AOS，等待用户确认。"),
 );
@@ -110,7 +111,7 @@ server.registerTool(
     title: "管理定时任务",
     description:
       "管理定时任务。action: list、add、addMany、update、remove、removeMany、removeAll、run、pause、resume、logs。",
-    inputSchema: ScheduleManageRequestSchema,
+    inputSchema: ScheduleManageRequestToolSchema,
   },
   async (args) => manageSchedule(args),
 );
@@ -121,7 +122,7 @@ server.registerTool(
     title: "提交验收结果",
     description:
       "tester 提交结构化验收结果。verdict 为 pass/fail/skip；skip 必须带 skipReason。调用后停止。",
-    inputSchema: AcceptanceSubmissionSchema,
+    inputSchema: AcceptanceSubmissionToolSchema,
   },
   async () => ok("验收结果已交给 ZY AOS。"),
 );

@@ -15,20 +15,23 @@ export const AcceptanceEvidenceSchema = z.object({
   url: z.string().trim().max(500).optional(),
 });
 
-export const AcceptanceSubmissionSchema = z
-  .object({
-    verdict: z.enum(["pass", "fail", "skip"]),
-    summary: z.string().trim().min(1).max(500),
-    checks: z.array(AcceptanceCheckSchema).max(40).default([]),
-    evidence: z.array(AcceptanceEvidenceSchema).max(20).default([]),
-    baseURL: z.string().trim().max(300).optional(),
-    viewport: z.string().trim().max(40).optional(),
-    source: z
-      .enum(["agent-browser", "playwright", "manual", "skip"])
-      .default("agent-browser"),
-    skipReason: z.string().trim().max(500).optional(),
-  })
-  .superRefine((value, ctx) => {
+// MCP SDK 只渲染对象型 inputSchema；superRefine 包装（ZodEffects）会被渲染成空参数，
+// 所以注册 MCP 工具用 ToolSchema，严格校验（skip 必须带 skipReason 等）仍用 AcceptanceSubmissionSchema。
+export const AcceptanceSubmissionToolSchema = z.object({
+  verdict: z.enum(["pass", "fail", "skip"]),
+  summary: z.string().trim().min(1).max(500),
+  checks: z.array(AcceptanceCheckSchema).max(40).default([]),
+  evidence: z.array(AcceptanceEvidenceSchema).max(20).default([]),
+  baseURL: z.string().trim().max(300).optional(),
+  viewport: z.string().trim().max(40).optional(),
+  source: z
+    .enum(["agent-browser", "playwright", "manual", "skip"])
+    .default("agent-browser"),
+  skipReason: z.string().trim().max(500).optional(),
+});
+
+export const AcceptanceSubmissionSchema = AcceptanceSubmissionToolSchema.superRefine(
+  (value, ctx) => {
     if (value.verdict === "skip" && !value.skipReason?.trim()) {
       ctx.addIssue({
         code: "custom",
@@ -39,7 +42,8 @@ export const AcceptanceSubmissionSchema = z
     if (value.verdict === "fail" && value.checks.every((c) => c.status !== "fail")) {
       // soft: allow fail without check items, but encourage checks
     }
-  });
+  },
+);
 
 export type AcceptanceSubmission = z.infer<typeof AcceptanceSubmissionSchema>;
 export type AcceptanceCheck = z.infer<typeof AcceptanceCheckSchema>;

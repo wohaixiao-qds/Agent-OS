@@ -47,10 +47,13 @@ export {
   looksLikeReviewFailure,
   clarificationToMarkdown,
   ClarificationRequestSchema,
+  ClarificationRequestToolSchema,
   DispatchTaskRequestSchema,
   ProductSpecRequestSchema,
+  ProductSpecRequestToolSchema,
   ApprovalRequestSchema,
   ScheduleManageRequestSchema,
+  ScheduleManageRequestToolSchema,
 } from "./app-tools.js";
 export type {
   ToolCallRecord,
@@ -66,6 +69,7 @@ export {
   AcceptanceCheckSchema,
   AcceptanceEvidenceSchema,
   AcceptanceSubmissionSchema,
+  AcceptanceSubmissionToolSchema,
   findAcceptanceSubmission,
   formatAcceptanceSummary,
 } from "./acceptance.js";
