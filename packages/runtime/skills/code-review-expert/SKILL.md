@@ -3,7 +3,7 @@ name: code-review-expert
 description: 对当前 git 变更做结构化代码审查（正确性、安全、可维护性）。
 ---
 
-# Code Review Expert（ML AOS）
+# Code Review Expert（ZY AOS）
 
 ## 审查重点
 

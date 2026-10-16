@@ -3,7 +3,7 @@ name: implement-ticket
 description: 实现已确认的产品方案，并完成基础验证后再交给测试与审查。
 ---
 
-# Implement Ticket（ML AOS）
+# Implement Ticket（ZY AOS）
 
 ## 执行顺序
 
@@ -17,4 +17,4 @@ description: 实现已确认的产品方案，并完成基础验证后再交给�
 
 - 不擅自扩展产品范围，不自动部署，不自动创建 Pull Request（除非任务明确要求）。
 - 无法启动应用、缺少账号或外部依赖不可用时，停止并明确报告阻塞。
-- 不要尝试直接联系 CEO 助理；结果由 ML AOS 交回调度或推进流水线。
+- 不要尝试直接联系 CEO 助理；结果由 ZY AOS 交回调度或推进流水线。

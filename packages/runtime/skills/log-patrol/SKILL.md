@@ -3,7 +3,7 @@ name: log-patrol
 description: 只读增量日志巡检；有 warning/critical 才通知，正常则静默。
 ---
 
-# Log Patrol（ML AOS）
+# Log Patrol（ZY AOS）
 
 收到日志巡检任务时严格执行：
 

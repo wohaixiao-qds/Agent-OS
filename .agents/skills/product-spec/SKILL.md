@@ -3,7 +3,7 @@ name: product-spec
 description: 把已澄清的需求写成工作区内唯一权威的产品规格 + Tickets，并提交确认卡。
 ---
 
-# Product Spec（ML AOS）
+# Product Spec（ZY AOS）
 
 在目标、范围、验收标准已聊清楚后，生成**唯一**权威产物，并交给用户确认。
 

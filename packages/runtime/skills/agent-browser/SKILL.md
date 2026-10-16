@@ -3,7 +3,7 @@ name: agent-browser
 description: 用浏览器做真实页面验收（CLI agent-browser 或等价手工检查清单）。
 ---
 
-# agent-browser（ML AOS）
+# agent-browser（ZY AOS）
 
 用于验证 Web UI 是否满足验收标准。
 
