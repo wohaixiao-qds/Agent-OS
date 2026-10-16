@@ -243,14 +243,17 @@ export class ZentaoTicketProvider implements TicketProvider {
           String(id),
         full: true,
       }));
-    } else {
-      // 兜底：执行关联不可用时，全局产品 + bug.project∈{0, 当前项目}。
-      // 待办模式跳过没有未解决 Bug 的产品，把请求量压下来。
+    } else if (executions.length > 0) {
+      // 兜底：项目有执行但详情的关联产品全部拉取失败时，
+      // 才退回「全局产品 + bug.project∈{0, 当前项目}」。
       bugProducts = (
         todoMode && globalProducts.some((p) => (p.unresolvedBugs ?? 0) > 0)
           ? globalProducts.filter((p) => (p.unresolvedBugs ?? 0) > 0)
           : globalProducts
       ).map((p) => ({ id: p.id, name: p.name, full: false }));
+    } else {
+      // 项目没有执行 → 没有可归属的产品范围，不展示 Bug。
+      bugProducts = [];
     }
 
     const bugs: TicketSummary[] = [];

@@ -150,6 +150,39 @@ describe("ZentaoTicketProvider", () => {
     }
   });
 
+  it("returns no bugs when the project has no executions (no fallback)", async () => {
+    const { dir, provider } = await makeProvider();
+    try {
+      const todos = await provider.listTodos("5");
+      // fake 执行 11 存在，模拟无执行：直接断言当前行为后，用 override 再测
+      expect(todos.length).toBeGreaterThan(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+
+    const dir2 = await mkdtemp(join(tmpdir(), "zy-aos-zentao-noexec-"));
+    await updateStoredZentaoCredentials(
+      {
+        baseUrl: "http://zentao.example",
+        account: "dev",
+        password: "pw",
+      },
+      dir2,
+    );
+    const client = {
+      ...fakeClient(),
+      listProjectExecutions: async () => [],
+    } as unknown as ZentaoClient;
+    const store = new ZentaoProjectsStore(dir2, async () => client);
+    const provider2 = new ZentaoTicketProvider(dir2, store, async () => client);
+    try {
+      const todos = await provider2.listTodos("5");
+      expect(todos).toEqual([]);
+    } finally {
+      await rm(dir2, { recursive: true, force: true });
+    }
+  });
+
   it("getDetail parses bug steps into description and image urls", async () => {
     const { dir, provider } = await makeProvider();
     try {
