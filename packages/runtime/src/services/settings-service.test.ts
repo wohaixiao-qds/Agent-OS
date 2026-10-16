@@ -20,7 +20,7 @@ describe("SettingsService", () => {
 
   it("returns default settings and patches theme", async () => {
     const initial = await service.get();
-    expect(initial.theme).toBe("dark");
+    expect(initial.theme).toBe("warm");
 
     const updated = await service.update({ theme: "light" });
     expect(updated.theme).toBe("light");

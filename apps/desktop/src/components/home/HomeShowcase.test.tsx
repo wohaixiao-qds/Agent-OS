@@ -54,7 +54,7 @@ describe("HomeShowcase Component", () => {
     });
 
     expect(container.textContent).toContain("ZYAOS");
-    expect(container.textContent).toContain("智能体操作系统");
+    expect(container.textContent).toContain("工单接入指定AI员工");
     expect(container.textContent).toContain("AI 数字化员工团队协作");
     expect(container.textContent).not.toContain("Gitee");
     expect(container.textContent).toContain("进入工作区");

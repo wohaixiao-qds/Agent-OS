@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -26,7 +26,10 @@ describe("mcp-invocation", () => {
     process.chdir(dir);
     const invocation = resolveMcpServerInvocation();
     expect(invocation.command).toBe(process.execPath);
-    expect(invocation.args).toEqual([join(dir, "app-tools-server.js")]);
+    // macOS 上 /var 是软链，process.cwd() 解析成 /private/var，须用真实路径比较
+    expect(invocation.args).toEqual([
+      join(realpathSync(dir), "app-tools-server.js"),
+    ]);
   });
 
   it("falls back to tsx + TypeScript source in dev tree", () => {
