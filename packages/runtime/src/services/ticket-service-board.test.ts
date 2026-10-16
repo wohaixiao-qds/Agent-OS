@@ -162,6 +162,7 @@ describe("TicketService board + state APIs", () => {
     } as unknown as GiteeProjectsStore;
 
     const { TicketService } = await import("./ticket-service.js");
+    const { GiteeTicketProvider } = await import("../tickets/gitee-provider.js");
     ticketService = new TicketService(
       dir,
       store,
@@ -169,7 +170,7 @@ describe("TicketService board + state APIs", () => {
       botService,
       chatService,
       botRunService,
-      projectsStore,
+      { gitee: new GiteeTicketProvider(projectsStore) },
       taskBoard,
     );
   });
@@ -182,8 +183,9 @@ describe("TicketService board + state APIs", () => {
     getIssueDetail.mockResolvedValue(fakeDetail());
 
     const result = await ticketService.dispatchToCeo({
+      provider: "gitee",
       projectId: "818309",
-      issueId: 42,
+      issueKey: "42",
     });
 
     expect(result.topicId).toBeTruthy();
@@ -201,16 +203,16 @@ describe("TicketService board + state APIs", () => {
 
   it("listIssueStates requires issueTypeId then lists type states", async () => {
     getIssueDetail.mockResolvedValue(fakeDetail({ issueTypeId: undefined }));
-    await expect(ticketService.listIssueStates("818309", 42)).rejects.toThrow(
-      /issue_type/,
-    );
+    await expect(
+      ticketService.listIssueStates("gitee", "818309", "42"),
+    ).rejects.toThrow(/issue_type/);
 
     getIssueDetail.mockResolvedValue(fakeDetail());
     listIssueTypeStates.mockResolvedValue([
       { id: 10, title: "已完成" },
       { id: 11, title: "进行中" },
     ]);
-    const states = await ticketService.listIssueStates("818309", 42);
+    const states = await ticketService.listIssueStates("gitee", "818309", "42");
     expect(listIssueTypeStates).toHaveBeenCalledWith(7);
     expect(states).toEqual([
       { id: 10, title: "已完成" },
@@ -240,8 +242,9 @@ describe("TicketService board + state APIs", () => {
     });
 
     const synced = await ticketService.updateIssueState({
+      provider: "gitee",
       projectId: "818309",
-      issueId: 42,
+      issueKey: "42",
       issueStateId: 10,
     });
     expect(synced).toEqual({ stateId: 10, stateTitle: "已完成" });
@@ -262,8 +265,9 @@ describe("TicketService board + state APIs", () => {
 
     await expect(
       ticketService.updateIssueState({
+        provider: "gitee",
         projectId: "818309",
-        issueId: 42,
+        issueKey: "42",
         issueStateId: 10,
       }),
     ).rejects.toThrow(/不属于当前项目/);

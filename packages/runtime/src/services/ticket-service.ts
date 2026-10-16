@@ -1,53 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { z } from "zod";
 import type { JsonStore } from "../store/json-store.js";
 import type { BotRunService } from "./bot-run-service.js";
 import type { BotService } from "./bot-service.js";
 import type { ChatService } from "./chat-service.js";
 import type { WorkspaceService } from "./workspace-service.js";
-import {
-  getIssueDetail,
-  giteeConfigured,
-  listIssueTypeStates,
-  listMyTodoIssues,
-  readGiteeEnvConfig,
-  updateIssueState as giteeUpdateIssueState,
-  type GiteeIssueDetail,
-  type GiteeIssueStateOption,
-  type GiteeTodoIssue,
-} from "../gitee/client.js";
-import { downloadIssueImages } from "../gitee/issue-assets.js";
-import {
-  GiteeProjectsStore,
-  type GiteeProjectConfig,
-  type ProjectRuntimeSettings,
-} from "../gitee/projects.js";
-import { findWorkspaceRoot } from "../load-env.js";
-import {
-  TaskBoardService,
-  boardTaskIdForGitee,
-} from "./task-board-service.js";
+import type { TaskBoardService } from "./task-board-service.js";
+import { boardTaskIdForTicket } from "./task-board-service.js";
+import { TicketDispatchStore } from "./ticket-dispatches.js";
+import type {
+  TicketProvider,
+  TicketProviderId,
+  TicketProject,
+  TicketProjectSettingsPatch,
+  TicketStateOption,
+  TicketSummary,
+  TicketDetail,
+} from "../tickets/provider.js";
 
-const DispatchRecordSchema = z.object({
-  issueId: z.number(),
-  ident: z.string(),
-  projectId: z.string(),
-  topicId: z.string(),
-  cast: z.array(z.string()),
-  localPath: z.string(),
-  engine: z.enum(["claude", "codex"]),
-  at: z.string(),
-});
-
-const DispatchFileSchema = z.object({
-  byIssueId: z.record(DispatchRecordSchema).default({}),
-});
-
-export type TicketDispatchRecord = z.infer<typeof DispatchRecordSchema>;
-
-export type TicketListItem = GiteeTodoIssue & {
+export type TicketListItem = TicketSummary & {
   topicId?: string;
   pipelineStage?: string;
 };
@@ -57,7 +27,7 @@ function pathKey(value: string): string {
 }
 
 export class TicketService {
-  private readonly projects: GiteeProjectsStore;
+  private readonly dispatches: TicketDispatchStore;
   private readonly taskBoard: TaskBoardService;
 
   constructor(
@@ -67,109 +37,168 @@ export class TicketService {
     private readonly botService: BotService,
     private readonly chatService: ChatService,
     private readonly botRunService: BotRunService,
-    projectsStore?: GiteeProjectsStore,
+    providers: Partial<Record<TicketProviderId, TicketProvider>>,
     taskBoard?: TaskBoardService,
   ) {
-    this.projects = projectsStore ?? new GiteeProjectsStore(dataDir);
+    this.providers = providers;
     this.taskBoard = taskBoard ?? new TaskBoardService(dataDir);
+    this.dispatches = new TicketDispatchStore(dataDir);
   }
 
-  private dispatchPath(): string {
-    return resolve(this.dataDir, "gitee-dispatches.json");
+  private readonly providers: Partial<
+    Record<TicketProviderId, TicketProvider>
+  >;
+
+  private provider(providerId: string): TicketProvider {
+    const provider = this.providers[providerId as TicketProviderId];
+    if (!provider) throw new Error(`未知工单来源: ${providerId}`);
+    return provider;
   }
 
-  private async loadDispatches(): Promise<
-    Record<string, TicketDispatchRecord>
-  > {
-    try {
-      const raw = await readFile(this.dispatchPath(), "utf8");
-      return DispatchFileSchema.parse(JSON.parse(raw)).byIssueId;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
-      throw error;
-    }
-  }
-
-  private async saveDispatches(
-    byIssueId: Record<string, TicketDispatchRecord>,
-  ): Promise<void> {
-    const path = this.dispatchPath();
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(
-      path,
-      `${JSON.stringify({ byIssueId }, null, 2)}\n`,
-      "utf8",
-    );
-  }
-
-  status(): { configured: boolean; projectsPath: string } {
+  status(): {
+    providers: Array<{
+      id: TicketProviderId;
+      label: string;
+      configured: boolean;
+      projectsPath?: string;
+    }>;
+  } {
     return {
-      configured: giteeConfigured(),
-      projectsPath:
-        process.env.GITEE_PROJECTS_CONFIG?.trim() ||
-        resolve(findWorkspaceRoot(), "config", "gitee-projects.json"),
+      providers: Object.values(this.providers)
+        .filter((p): p is TicketProvider => Boolean(p))
+        .map((p) => ({ ...p.status(), id: p.id, label: p.label })),
     };
   }
 
-  listProjects(): Promise<GiteeProjectConfig[]> {
-    return this.projects.list();
+  listProjects(providerId: string): Promise<TicketProject[]> {
+    return this.provider(providerId).listProjects();
   }
 
   updateProject(
+    providerId: string,
     projectId: string,
-    patch: ProjectRuntimeSettings,
-  ): Promise<GiteeProjectConfig> {
-    return this.projects.updateSettings(projectId, patch);
+    patch: TicketProjectSettingsPatch,
+  ): Promise<TicketProject> {
+    return this.provider(providerId).updateProjectSettings(projectId, patch);
   }
 
   async listTodos(
+    providerId: string,
     projectId: string,
     options?: { includeAllStates?: boolean },
   ): Promise<TicketListItem[]> {
-    const project = await this.projects.get(projectId);
-    if (!project) throw new Error(`Gitee 项目不存在: ${projectId}`);
-    const issues = await listMyTodoIssues({
-      programId: project.programId,
-      includeAllStates: options?.includeAllStates,
-    });
-    const dispatches = await this.loadDispatches();
+    const provider = this.provider(providerId);
+    const todos = await provider.listTodos(projectId, options);
     const state = await this.store.load();
-    return issues.map((issue) => {
-      const record = dispatches[String(issue.id)];
-      const topic = record
-        ? state.topics.find((t) => t.id === record.topicId)
-        : undefined;
-      return {
-        ...issue,
-        topicId: record?.topicId,
-        pipelineStage: topic?.pipelineStage,
-      };
-    });
+    return Promise.all(
+      todos.map(async (todo) => {
+        const record = await this.dispatches.find(provider.id, todo.key);
+        const topic = record
+          ? state.topics.find((t) => t.id === record.topicId)
+          : undefined;
+        return {
+          ...todo,
+          topicId: record?.topicId,
+          pipelineStage: topic?.pipelineStage,
+        };
+      }),
+    );
   }
 
-  async getTodoDetail(
+  getTodoDetail(
+    providerId: string,
     projectId: string,
     issueKey: string,
-  ): Promise<GiteeIssueDetail> {
-    const project = await this.projects.get(projectId);
-    if (!project) throw new Error(`Gitee 项目不存在: ${projectId}`);
-    return getIssueDetail(issueKey);
+  ): Promise<TicketDetail> {
+    return this.provider(providerId).getDetail(projectId, issueKey);
+  }
+
+  async listIssueStates(
+    providerId: string,
+    projectId: string,
+    issueKey: string,
+  ): Promise<TicketStateOption[]> {
+    return this.provider(providerId).listStates(projectId, issueKey);
+  }
+
+  async updateIssueState(input: {
+    provider: TicketProviderId;
+    projectId: string;
+    issueKey: string;
+    issueStateId: number;
+  }): Promise<{ stateTitle: string; stateId: number }> {
+    const provider = this.provider(input.provider);
+    const project = await provider.getProject(input.projectId);
+    if (!project) {
+      throw new Error(`${provider.label} 项目不存在: ${input.projectId}`);
+    }
+    const detail = await provider.getDetail(
+      input.projectId,
+      input.issueKey,
+    );
+    if (String(detail.programId) !== String(project.programId)) {
+      throw new Error(
+        `工单不属于当前项目：issue programId=${detail.programId}, project programId=${project.programId}`,
+      );
+    }
+
+    const result = await provider.updateState({
+      projectId: input.projectId,
+      issueKey: input.issueKey,
+      stateId: input.issueStateId,
+    });
+
+    let stateTitle = result.stateTitle.trim();
+    if (!stateTitle) {
+      try {
+        const states = await provider.listStates(
+          input.projectId,
+          input.issueKey,
+        );
+        stateTitle =
+          states.find((s) => s.id === result.stateId)?.title ??
+          states.find((s) => s.id === input.issueStateId)?.title ??
+          "";
+      } catch {
+        // keep empty title if lookup fails
+      }
+    }
+
+    const synced = { stateId: result.stateId, stateTitle };
+    const boardRow = await this.taskBoard.findByExternalIssue(
+      provider.id,
+      detail.ident,
+    );
+    if (boardRow) {
+      await this.taskBoard.recordExternalSync(boardRow.id, {
+        id: synced.stateId,
+        title: synced.stateTitle,
+      });
+    }
+    return synced;
   }
 
   async dispatchToCeo(input: {
+    provider: TicketProviderId;
     projectId: string;
-    issueId: number;
+    issueKey: string;
     workspaceId?: string;
     note?: string;
   }): Promise<{ topicId: string; botId: string }> {
-    const project = await this.projects.get(input.projectId);
-    if (!project) throw new Error(`Gitee 项目不存在: ${input.projectId}`);
+    const provider = this.provider(input.provider);
+    const project = await provider.getProject(input.projectId);
+    if (!project) {
+      throw new Error(`${provider.label} 项目不存在: ${input.projectId}`);
+    }
     if (!project.localPath?.trim()) {
       throw new Error("请先在工单项目配置中填写本地工作目录");
     }
 
-    const detail = await getIssueDetail(input.issueId);
-    if (!detail) throw new Error(`找不到工单 #${input.issueId}`);
+    const detail = await provider.getDetail(
+      input.projectId,
+      input.issueKey,
+    );
+    if (!detail) throw new Error(`找不到工单 ${input.issueKey}`);
 
     const workspace = await this.resolveWorkspace(
       project.localPath,
@@ -183,9 +212,8 @@ export class TicketService {
     );
     if (!ceo) throw new Error("未找到已启用的 CEO 助理");
 
-    const config = readGiteeEnvConfig();
-    const downloads = await downloadIssueImages({
-      config,
+    const downloads = await provider.downloadImages({
+      projectId: input.projectId,
       localPath: project.localPath,
       ident: detail.ident,
       urls: detail.imageUrls,
@@ -239,9 +267,9 @@ export class TicketService {
           ];
 
     const prompt = [
-      "用户从 Gitee 待办中选中了一条工单，请你作为 CEO 助理组织后续工作。",
+      `用户从 ${provider.label} 待办中选中了一条工单，请你作为 CEO 助理组织后续工作。`,
       `项目：${project.name}（${project.ident ?? project.programId}）`,
-      `迭代：${detail.sprintTitle}`,
+      `迭代：${detail.sprintTitle || "（无迭代信息）"}`,
       `工作项：${detail.ident}`,
       `标题：${detail.title}`,
       `链接：${detail.url}`,
@@ -270,7 +298,7 @@ export class TicketService {
         topicId: topic.id,
         author: "system",
         content: [
-          `[gitee] 已接入工单 ${detail.ident}`,
+          `[${provider.id}] 已接入工单 ${detail.ident}`,
           detail.url,
           `项目目录：${project.localPath}`,
           `引擎：${project.defaultEngine}`,
@@ -297,9 +325,10 @@ export class TicketService {
       prompt,
     });
 
-    const dispatches = await this.loadDispatches();
-    dispatches[String(detail.id)] = {
+    await this.dispatches.save({
+      provider: provider.id,
       issueId: detail.id,
+      issueKey: detail.key,
       ident: detail.ident,
       projectId: project.id,
       topicId: topic.id,
@@ -307,16 +336,20 @@ export class TicketService {
       localPath: project.localPath,
       engine: project.defaultEngine,
       at: new Date().toISOString(),
-    };
-    await this.saveDispatches(dispatches);
+    });
 
     await this.taskBoard.upsert({
-      id: boardTaskIdForGitee(String(detail.programId), detail.ident),
+      id: boardTaskIdForTicket(
+        provider.id,
+        String(detail.programId),
+        detail.ident,
+      ),
       title: `${detail.ident} ${detail.title}`.slice(0, 200),
       status: "running",
-      source: "gitee",
-      gitee: {
-        programId: String(detail.programId),
+      source: provider.id,
+      external: {
+        provider: provider.id,
+        projectId: String(detail.programId),
         issueId: detail.id,
         issueIdent: detail.ident,
         url: detail.url,
@@ -328,67 +361,6 @@ export class TicketService {
     });
 
     return { topicId: topic.id, botId: ceo.id };
-  }
-
-  async listIssueStates(
-    projectId: string,
-    issueId: number,
-  ): Promise<GiteeIssueStateOption[]> {
-    const project = await this.projects.get(projectId);
-    if (!project) throw new Error(`Gitee 项目不存在: ${projectId}`);
-    const detail = await getIssueDetail(issueId);
-    if (detail.issueTypeId == null) {
-      throw new Error("工单缺少 issue_type，无法列状态");
-    }
-    return listIssueTypeStates(detail.issueTypeId);
-  }
-
-  async updateIssueState(input: {
-    projectId: string;
-    issueId: number;
-    issueStateId: number;
-  }): Promise<{ stateTitle: string; stateId: number }> {
-    const project = await this.projects.get(input.projectId);
-    if (!project) throw new Error(`Gitee 项目不存在: ${input.projectId}`);
-
-    const detail = await getIssueDetail(input.issueId);
-    if (String(detail.programId) !== String(project.programId)) {
-      throw new Error(
-        `工单不属于当前项目：issue programId=${detail.programId}, project programId=${project.programId}`,
-      );
-    }
-
-    const result = await giteeUpdateIssueState({
-      issueId: input.issueId,
-      issueStateId: input.issueStateId,
-    });
-
-    let stateTitle = result.stateTitle.trim();
-    if (!stateTitle) {
-      try {
-        const states = await this.listIssueStates(
-          input.projectId,
-          input.issueId,
-        );
-        stateTitle =
-          states.find((s) => s.id === result.stateId)?.title ??
-          states.find((s) => s.id === input.issueStateId)?.title ??
-          "";
-      } catch {
-        // keep empty title if lookup fails
-      }
-    }
-
-    const synced = { stateId: result.stateId, stateTitle };
-    const boardRow = await this.taskBoard.findByGiteeIssueId(input.issueId);
-    if (boardRow) {
-      await this.taskBoard.recordGiteeSync(boardRow.id, {
-        id: synced.stateId,
-        title: synced.stateTitle,
-      });
-    }
-
-    return synced;
   }
 
   private async resolveWorkspace(

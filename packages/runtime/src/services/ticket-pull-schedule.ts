@@ -7,11 +7,13 @@ import {
   matchesPullPriority,
   type PullPriority,
 } from "../gitee/priority.js";
+import type { TicketProviderId } from "../tickets/provider.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
 const TaskSchema = z.object({
   id: z.string(),
+  provider: z.enum(["gitee", "zentao"]).default("gitee"),
   projectId: z.string(),
   everyHours: z.number().int().min(1).max(24),
   priority: z.enum(["severe", "major", "none"]),
@@ -26,17 +28,24 @@ const TaskSchema = z.object({
 export type TicketPullTask = z.infer<typeof TaskSchema>;
 
 export interface TicketPullPort {
-  listProjects(): Promise<
-    Array<{ id: string; localPath?: string; cast?: string[] }>
-  >;
+  listProjects(
+    provider: TicketProviderId,
+  ): Promise<Array<{ id: string; localPath?: string; cast?: string[] }>>;
   listTodos(
+    provider: TicketProviderId,
     projectId: string,
   ): Promise<
-    Array<{ id: number; ident: string; priority: string; topicId?: string }>
+    Array<{
+      key: string;
+      ident: string;
+      priority: string;
+      topicId?: string;
+    }>
   >;
   dispatchToCeo(input: {
+    provider: TicketProviderId;
     projectId: string;
-    issueId: number;
+    issueKey: string;
   }): Promise<unknown>;
 }
 
@@ -71,6 +80,7 @@ export class TicketPullScheduleService {
   }
 
   async add(input: {
+    provider: TicketProviderId;
     projectId: string;
     everyHours: number;
     priority: PullPriority;
@@ -83,15 +93,21 @@ export class TicketPullScheduleService {
     if (!["severe", "major", "none"].includes(input.priority)) {
       throw new Error("优先级不正确");
     }
-    const projects = await this.tickets.listProjects();
+    const projects = await this.tickets.listProjects(input.provider);
     const project = projects.find((item) => item.id === input.projectId);
     if (!project) throw new Error("找不到这个工单项目");
-    if (this.tasks.some((task) => task.projectId === project.id)) {
+    if (
+      this.tasks.some(
+        (task) =>
+          task.provider === input.provider && task.projectId === project.id,
+      )
+    ) {
       throw new Error("该项目已有定时任务");
     }
     const now = new Date().toISOString();
     const task: TicketPullTask = {
       id: randomUUID().replaceAll("-", "").slice(0, 12),
+      provider: input.provider,
       projectId: project.id,
       everyHours,
       priority: input.priority,
@@ -191,13 +207,13 @@ export class TicketPullScheduleService {
   }
 
   private async pull(task: TicketPullTask): Promise<string> {
-    const projects = await this.tickets.listProjects();
+    const projects = await this.tickets.listProjects(task.provider);
     const project = projects.find((item) => item.id === task.projectId);
     if (!project) throw new Error("找不到这个工单项目");
     if (!project.localPath?.trim()) {
       throw new Error("请先在工单项目配置中填写本地工作目录");
     }
-    const todos = await this.tickets.listTodos(task.projectId);
+    const todos = await this.tickets.listTodos(task.provider, task.projectId);
     const matched = todos
       .filter(
         (todo) =>
@@ -210,8 +226,9 @@ export class TicketPullScheduleService {
     for (const todo of matched) {
       try {
         await this.tickets.dispatchToCeo({
+          provider: task.provider,
           projectId: task.projectId,
-          issueId: todo.id,
+          issueKey: todo.key,
         });
         handed += 1;
       } catch (error) {

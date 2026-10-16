@@ -1,6 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { ChatMessage, DispatchTaskRequest } from "@zy-aos/shared";
 import { findDispatchTaskRequest } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
@@ -9,6 +7,7 @@ import type { BotService } from "./bot-service.js";
 import type { ChatEvent } from "./chat-service.js";
 import type { AppControl } from "./app-control.js";
 import { resolveTeamLeaderDispatch } from "./team-leader-guard.js";
+import { TicketDispatchStore } from "./ticket-dispatches.js";
 
 /**
  * agent-os isomorphic handoff:
@@ -137,23 +136,7 @@ export class TeamHandoff {
   }
 
   private async topicCast(topicId: string): Promise<string[] | null> {
-    try {
-      const raw = await readFile(
-        join(this.store.getDir(), "gitee-dispatches.json"),
-        "utf-8",
-      );
-      const parsed = JSON.parse(raw) as {
-        byIssueId?: Record<string, { topicId?: string; cast?: string[] }>;
-      };
-      for (const row of Object.values(parsed.byIssueId ?? {})) {
-        if (row.topicId === topicId && Array.isArray(row.cast)) {
-          return row.cast;
-        }
-      }
-    } catch {
-      // no dispatch file / parse error → unconstrained
-    }
-    return null;
+    return new TicketDispatchStore(this.store.getDir()).topicCast(topicId);
   }
 
   private async reportToCeo(

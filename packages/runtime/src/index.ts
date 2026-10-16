@@ -15,6 +15,7 @@ import { TicketPullScheduleService } from "./services/ticket-pull-schedule.js";
 import { AgentScheduleService } from "./services/agent-schedule.js";
 import { ClarificationService } from "./services/clarification-service.js";
 import { TicketService } from "./services/ticket-service.js";
+import { GiteeTicketProvider } from "./tickets/gitee-provider.js";
 import { TaskBoardService } from "./services/task-board-service.js";
 import { AcceptanceService } from "./services/acceptance-service.js";
 import { AcceptanceRunner } from "./services/acceptance-runner.js";
@@ -161,7 +162,7 @@ const ticketService = new TicketService(
   botService,
   chatService,
   botRunService,
-  giteeProjects,
+  { gitee: new GiteeTicketProvider(giteeProjects) },
   taskBoard,
 );
 const ticketPulls = new TicketPullScheduleService(dataDir, ticketService);

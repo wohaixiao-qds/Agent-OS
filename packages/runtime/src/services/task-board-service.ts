@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { z } from "zod";
+import type { TicketProviderId } from "../tickets/provider.js";
 
 export type BoardTaskStatus = "running" | "completed" | "failed";
 export type BoardFailureReason =
@@ -10,6 +11,21 @@ export type BoardFailureReason =
   | "pipeline_blocked"
   | "unknown";
 
+/** Provider-agnostic ticket reference on a board row (ADR-0007). */
+export interface BoardExternalRef {
+  provider: TicketProviderId;
+  /** Gitee programId / ZenTao projectId. */
+  projectId: string;
+  issueId?: number;
+  issueIdent: string;
+  url: string;
+  issueTypeId?: number;
+  lastSyncedStateId?: number;
+  lastSyncedStateTitle?: string;
+  lastSyncedAt?: string;
+}
+
+/** @deprecated Pre-ADR-0007 shape; still written as a mirror for old builds. */
 export interface BoardGiteeRef {
   programId: string;
   issueId: number;
@@ -25,7 +41,9 @@ export interface BoardTask {
   id: string;
   title: string;
   status: BoardTaskStatus;
-  source: "gitee" | "pipeline" | "direct";
+  source: TicketProviderId | "pipeline" | "direct";
+  external?: BoardExternalRef;
+  /** @deprecated Mirror of external for gitee rows; read-only. */
   gitee?: BoardGiteeRef;
   topicId?: string;
   pipelineId?: string;
@@ -49,11 +67,24 @@ const BoardGiteeRefSchema = z.object({
   lastSyncedAt: z.string().optional(),
 });
 
+const BoardExternalRefSchema = z.object({
+  provider: z.enum(["gitee", "zentao"]),
+  projectId: z.string(),
+  issueId: z.number().optional(),
+  issueIdent: z.string(),
+  url: z.string(),
+  issueTypeId: z.number().optional(),
+  lastSyncedStateId: z.number().optional(),
+  lastSyncedStateTitle: z.string().optional(),
+  lastSyncedAt: z.string().optional(),
+});
+
 const BoardTaskSchema = z.object({
   id: z.string(),
   title: z.string(),
   status: z.enum(["running", "completed", "failed"]),
-  source: z.enum(["gitee", "pipeline", "direct"]),
+  source: z.enum(["gitee", "zentao", "pipeline", "direct"]),
+  external: BoardExternalRefSchema.optional(),
   gitee: BoardGiteeRefSchema.optional(),
   topicId: z.string().optional(),
   pipelineId: z.string().optional(),
@@ -84,8 +115,17 @@ const BoardFileSchema = z.object({
   tasks: z.array(BoardTaskSchema).default([]),
 });
 
+export function boardTaskIdForTicket(
+  provider: TicketProviderId,
+  projectId: string,
+  ident: string,
+): string {
+  return `${provider}:${projectId}:${ident}`;
+}
+
+/** Legacy alias — same output as boardTaskIdForTicket("gitee", …). */
 export function boardTaskIdForGitee(programId: string, ident: string): string {
-  return `gitee:${programId}:${ident}`;
+  return boardTaskIdForTicket("gitee", programId, ident);
 }
 
 export function boardTaskIdForPipeline(pipelineId: string): string {
@@ -102,14 +142,52 @@ function isTodayLocal(iso: string): boolean {
   );
 }
 
-function mergeGitee(
-  existing: BoardGiteeRef | undefined,
-  incoming: BoardGiteeRef | undefined,
-): BoardGiteeRef | undefined {
+function mergeExternal(
+  existing: BoardExternalRef | undefined,
+  incoming: BoardExternalRef | undefined,
+): BoardExternalRef | undefined {
   if (!existing && !incoming) return undefined;
   if (!existing) return incoming;
   if (!incoming) return existing;
   return { ...existing, ...incoming };
+}
+
+function giteeMirror(external: BoardExternalRef | undefined): BoardGiteeRef | undefined {
+  if (external?.provider !== "gitee") return undefined;
+  return {
+    programId: external.projectId,
+    issueId: external.issueId ?? 0,
+    issueIdent: external.issueIdent,
+    url: external.url,
+    issueTypeId: external.issueTypeId,
+    lastSyncedStateId: external.lastSyncedStateId,
+    lastSyncedStateTitle: external.lastSyncedStateTitle,
+    lastSyncedAt: external.lastSyncedAt,
+  };
+}
+
+/** Map legacy gitee refs onto external; drop the stale mirror before write. */
+function normalizeTask(task: BoardTask): BoardTask {
+  if (!task.external && task.gitee) {
+    task = {
+      ...task,
+      external: {
+        provider: "gitee",
+        projectId: task.gitee.programId,
+        issueId: task.gitee.issueId,
+        issueIdent: task.gitee.issueIdent,
+        url: task.gitee.url,
+        issueTypeId: task.gitee.issueTypeId,
+        lastSyncedStateId: task.gitee.lastSyncedStateId,
+        lastSyncedStateTitle: task.gitee.lastSyncedStateTitle,
+        lastSyncedAt: task.gitee.lastSyncedAt,
+      },
+    };
+  }
+  if (task.source === "gitee" && task.external) {
+    task = { ...task, gitee: giteeMirror(task.external) };
+  }
+  return task;
 }
 
 export class TaskBoardService {
@@ -131,13 +209,15 @@ export class TaskBoardService {
   }
 
   private async loadTasks(): Promise<BoardTask[]> {
+    let tasks: BoardTask[];
     try {
       const raw = await readFile(this.boardPath(), "utf8");
-      return BoardFileSchema.parse(JSON.parse(raw)).tasks;
+      tasks = BoardFileSchema.parse(JSON.parse(raw)).tasks;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw error;
     }
+    return tasks.map(normalizeTask);
   }
 
   private async saveTasks(tasks: BoardTask[]): Promise<void> {
@@ -190,33 +270,50 @@ export class TaskBoardService {
   }
 
   async upsert(
-    partial: Omit<BoardTask, "createdAt" | "updatedAt"> & {
+    partial: Omit<BoardTask, "createdAt" | "updatedAt" | "gitee"> & {
       id: string;
       title: string;
       status: BoardTaskStatus;
       source: BoardTask["source"];
+      /** Legacy input shape: gitee ref is converted to external. */
+      gitee?: BoardGiteeRef;
     },
   ): Promise<BoardTask> {
     return this.transact((tasks) => {
       const now = new Date().toISOString();
+      const external =
+        partial.external ??
+        (partial.gitee
+          ? ({
+              provider: "gitee",
+              projectId: partial.gitee.programId,
+              issueId: partial.gitee.issueId,
+              issueIdent: partial.gitee.issueIdent,
+              url: partial.gitee.url,
+              issueTypeId: partial.gitee.issueTypeId,
+            } satisfies BoardExternalRef)
+          : undefined);
       const index = tasks.findIndex((t) => t.id === partial.id);
       if (index >= 0) {
         const existing = tasks[index]!;
-        const merged: BoardTask = {
+        const merged: BoardTask = normalizeTask({
           ...existing,
           ...partial,
-          gitee: mergeGitee(existing.gitee, partial.gitee),
+          external: mergeExternal(existing.external, external),
+          gitee: undefined,
           createdAt: existing.createdAt,
           updatedAt: now,
-        };
+        });
         tasks[index] = merged;
         return merged;
       }
-      const created: BoardTask = {
+      const created: BoardTask = normalizeTask({
         ...partial,
+        external,
+        gitee: undefined,
         createdAt: now,
         updatedAt: now,
-      };
+      });
       tasks.push(created);
       return created;
     });
@@ -265,7 +362,7 @@ export class TaskBoardService {
     });
   }
 
-  async recordGiteeSync(
+  async recordExternalSync(
     id: string,
     state: { id: number; title: string },
   ): Promise<BoardTask | undefined> {
@@ -273,21 +370,29 @@ export class TaskBoardService {
       const index = tasks.findIndex((t) => t.id === id);
       if (index < 0) return undefined;
       const existing = tasks[index]!;
-      if (!existing.gitee) return undefined;
+      if (!existing.external) return undefined;
       const now = new Date().toISOString();
-      const updated: BoardTask = {
+      const updated: BoardTask = normalizeTask({
         ...existing,
         updatedAt: now,
-        gitee: {
-          ...existing.gitee,
+        external: {
+          ...existing.external,
           lastSyncedStateId: state.id,
           lastSyncedStateTitle: state.title,
           lastSyncedAt: now,
         },
-      };
+      });
       tasks[index] = updated;
       return updated;
     });
+  }
+
+  /** Legacy alias over recordExternalSync. */
+  async recordGiteeSync(
+    id: string,
+    state: { id: number; title: string },
+  ): Promise<BoardTask | undefined> {
+    return this.recordExternalSync(id, state);
   }
 
   async findByTopicId(topicId: string): Promise<BoardTask | undefined> {
@@ -295,8 +400,24 @@ export class TaskBoardService {
     return tasks.find((t) => t.topicId === topicId);
   }
 
+  async findByExternalIssue(
+    provider: TicketProviderId,
+    issueIdent: string,
+  ): Promise<BoardTask | undefined> {
+    const tasks = await this.loadTasks();
+    return tasks.find(
+      (t) =>
+        t.external?.provider === provider &&
+        t.external?.issueIdent === issueIdent,
+    );
+  }
+
+  /** Legacy alias over findByExternalIssue (matches by numeric issueId). */
   async findByGiteeIssueId(issueId: number): Promise<BoardTask | undefined> {
     const tasks = await this.loadTasks();
-    return tasks.find((t) => t.gitee?.issueId === issueId);
+    return tasks.find(
+      (t) =>
+        t.external?.provider === "gitee" && t.external?.issueId === issueId,
+    );
   }
 }
