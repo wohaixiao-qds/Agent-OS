@@ -51,6 +51,15 @@
   border-bottom-color: var(--accent);
 }
 
+.ticket-provider-tab.is-unconfigured {
+  color: var(--text-faint);
+  border-bottom: 2px dashed transparent;
+}
+
+.ticket-provider-tab.is-unconfigured:hover {
+  color: var(--accent);
+}
+
 .ticket-provider-dot {
   width: 6px;
   height: 6px;

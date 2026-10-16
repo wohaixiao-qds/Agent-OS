@@ -101,12 +101,21 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
 
   const providerLabel =
     PROVIDERS.find((p) => p.id === provider)?.label ?? provider;
-  // 只展示已配置的来源；没配置的不出现在收件箱。
+  // 只展示已配置的来源；未配置的以「＋去配置」引导形式出现。
   const configuredProviders = useMemo(
     () =>
       PROVIDERS.filter(
         (item) =>
           providerStatus.find((s) => s.id === item.id)?.configured ?? false,
+      ),
+    [providerStatus],
+  );
+  const unconfiguredProviders = useMemo(
+    () =>
+      PROVIDERS.filter(
+        (item) =>
+          providerStatus.length > 0 &&
+          !(providerStatus.find((s) => s.id === item.id)?.configured ?? false),
       ),
     [providerStatus],
   );
@@ -345,7 +354,8 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         </div>
       </header>
 
-      {configuredProviders.length > 1 ? (
+      {configuredProviders.length > 0 &&
+      (configuredProviders.length > 1 || unconfiguredProviders.length > 0) ? (
         <div
           className="ticket-provider-tabs"
           role="tablist"
@@ -374,6 +384,17 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
               </button>
             );
           })}
+          {unconfiguredProviders.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="ticket-provider-tab is-unconfigured"
+              title={`尚未配置${item.label}，点击去设置`}
+              onClick={() => navigate("/settings")}
+            >
+              ＋{item.label}
+            </button>
+          ))}
         </div>
       ) : null}
 

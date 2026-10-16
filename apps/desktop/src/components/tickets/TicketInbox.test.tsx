@@ -102,6 +102,8 @@ describe("TicketInbox (API)", () => {
     });
 
     expect(container.textContent).toContain("工单");
+    // 未配置的来源以「＋来源」引导出现，点击跳设置。
+    expect(container.textContent).toContain("＋禅道");
     expect(container.textContent).toContain("航研所项目");
     expect(container.textContent).toContain("IHY-128");
     expect(container.textContent).toContain("交给 CEO");
