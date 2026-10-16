@@ -23,10 +23,10 @@ export function botPortrait(
   bot: Pick<BotConfig, "name" | "role"> | null | undefined,
 ): string | undefined {
   const hay = `${bot?.name ?? ""} ${bot?.role ?? ""}`.toLowerCase();
-  if (/product|产品/.test(hay)) return "/product.jpg";
-  if (/ceo|orchestrat|助理/.test(hay)) return "/ceo.jpg";
-  if (/review|audit|security|审查/.test(hay)) return "/viewer.jpg";
-  if (/test|qa|测试/.test(hay)) return "/test.jpg";
-  if (/dev|code|engineer|开发/.test(hay)) return "/develope.jpg";
+  if (/product|产品/.test(hay)) return "/product.svg";
+  if (/ceo|orchestrat|助理/.test(hay)) return "/ceo.svg";
+  if (/review|audit|security|审查/.test(hay)) return "/reviewer.svg";
+  if (/test|qa|测试/.test(hay)) return "/test.svg";
+  if (/dev|code|engineer|开发/.test(hay)) return "/developer.svg";
   return undefined;
 }
