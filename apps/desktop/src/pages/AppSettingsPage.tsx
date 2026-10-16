@@ -28,6 +28,9 @@ export function AppSettingsPage() {
   const { theme, onThemeChange } = useOutletContext<AppOutletContext>();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [gitee, setGitee] = useState<GiteeIntegrationSettings | null>(null);
+  const [integrationProvider, setIntegrationProvider] = useState<
+    "gitee" | "zentao"
+  >("gitee");
   const [tokenDraft, setTokenDraft] = useState("");
   const [enterpriseId, setEnterpriseId] = useState("");
   const [userId, setUserId] = useState("");
@@ -353,13 +356,31 @@ export function AppSettingsPage() {
 
       <section className="panel-form">
         <h2 className="section-title">集成工单</h2>
-        <p className="field-hint">
-          如何获取：当前仅支持 Gitee 工单系统 → 打开 Gitee 企业版 → 私人令牌 /
-          Access Token，复制 token；企业 ID 与用户 ID 可在企业设置或 API
-          文档中查看。
-        </p>
 
-        {giteeError ? <p className="form-error">{giteeError}</p> : null}
+        <label className="field">
+          <span>工单来源</span>
+          <select
+            value={integrationProvider}
+            disabled={busy}
+            onChange={(e) => {
+              setIntegrationProvider(e.target.value as "gitee" | "zentao");
+              setStatus(null);
+            }}
+          >
+            <option value="gitee">Gitee 企业工单</option>
+            <option value="zentao">禅道（Bug + 任务）</option>
+          </select>
+        </label>
+
+        {integrationProvider === "gitee" ? (
+          <>
+            <p className="field-hint">
+              如何获取：打开 Gitee 企业版 → 私人令牌 / Access
+              Token，复制 token；企业 ID 与用户 ID 可在企业设置或 API
+              文档中查看。
+            </p>
+
+            {giteeError ? <p className="form-error">{giteeError}</p> : null}
 
         {gitee?.envOverridesActive ? (
           <p className="form-status">
@@ -444,16 +465,16 @@ export function AppSettingsPage() {
             保存 Gitee 配置
           </button>
         </div>
-        {status ? <p className="form-status">{status}</p> : null}
+          </>
+        ) : (
+          <>
+            <p className="field-hint">
+              填写禅道服务地址（如 http://zentao.corp.local）与账号密码。认证使用
+              REST API（api.php/v1），密码只保存在本机数据目录；HTTP
+              地址为明文传输，建议内网可信环境或启用 HTTPS。
+            </p>
 
-        <h3 className="section-title" style={{ marginTop: 8 }}>禅道</h3>
-        <p className="field-hint">
-          填写禅道服务地址（如 http://zentao.corp.local）与账号密码。认证使用
-          REST API（api.php/v1），密码只保存在本机数据目录；HTTP
-          地址为明文传输，建议内网可信环境或启用 HTTPS。
-        </p>
-
-        {zentaoError ? <p className="form-error">{zentaoError}</p> : null}
+            {zentaoError ? <p className="form-error">{zentaoError}</p> : null}
 
         {zentao?.envOverridesActive ? (
           <p className="form-status">
@@ -535,10 +556,16 @@ export function AppSettingsPage() {
             保存禅道配置
           </button>
         </div>
+          </>
+        )}
 
-        <h3 className="section-title" style={{ marginTop: 8 }}>
-          项目绑定
-        </h3>
+        {status ? <p className="form-status">{status}</p> : null}
+
+        {integrationProvider === "gitee" ? (
+          <>
+            <h3 className="section-title" style={{ marginTop: 8 }}>
+              项目绑定
+            </h3>
         <p className="field-hint">
           登录后项目列表优先从 Gitee 拉取。本地工作目录与参与 Bot 在工作台工单面板配置。可选白名单文件：
           <code className="mono">
@@ -550,8 +577,10 @@ export function AppSettingsPage() {
           {gitee?.projectsConfigViaEnv
             ? "（由环境变量 GITEE_PROJECTS_CONFIG / ZY_AOS_GITEE_PROJECTS_CONFIG 覆盖）"
             : "（默认位于数据目录；仓库内仅保留 example）"}
-          {gitee != null ? ` · 白名单条目 ${gitee.allowlistCount}` : null}
-        </p>
+              {gitee != null ? ` · 白名单条目 ${gitee.allowlistCount}` : null}
+            </p>
+          </>
+        ) : null}
       </section>
 
       <section className="panel-form">
