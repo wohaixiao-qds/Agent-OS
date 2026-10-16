@@ -66,6 +66,9 @@ function prioritySummary(priority: TicketPullPriority): string {
   );
 }
 
+/** 会话内只把默认来源初始化为「第一个已配置来源」一次。 */
+let providerInitialized = false;
+
 export function SchedulesPage() {
   const navigate = useNavigate();
   const { selectTopic } = useShell();
@@ -84,6 +87,7 @@ export function SchedulesPage() {
   const [everyHours, setEveryHours] = useState(1);
   const [priority, setPriority] = useState<TicketPullPriority>("major");
   const [error, setError] = useState("");
+  const [projectsNotice, setProjectsNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
 
   const enabledBots = bots.filter((bot) => bot.enabled);
@@ -120,15 +124,24 @@ export function SchedulesPage() {
   }, [bots]);
 
   async function load() {
-    const [projectList, tickets, agents, workspaceList, botList] =
+    const [projectResult, tickets, agents, workspaceList, botList] =
       await Promise.all([
-        api.listTicketProjects(ticketProvider),
+        api
+          .listTicketProjects(ticketProvider)
+          .then((list) => ({ list, error: "" }))
+          .catch((err: unknown) => ({
+            list: [] as ProjectRow[],
+            error:
+              err instanceof Error ? err.message : "工单项目拉取失败",
+          })),
         api.listTicketPulls(),
         api.listAgentSchedules(),
         api.listWorkspaces(),
         api.listBots(),
       ]);
+    const projectList = projectResult.list;
     setProjects(projectList);
+    setProjectsNotice(projectResult.error || null);
     setTicketRows(tickets);
     setAgentRows(agents);
     setWorkspaces(workspaceList);
@@ -151,10 +164,36 @@ export function SchedulesPage() {
   }
 
   useEffect(() => {
-    void load().catch((err: unknown) => {
-      setError(err instanceof Error ? err.message : "加载失败");
-    });
-  }, []);
+    let cancelled = false;
+    void (async () => {
+      try {
+        // 首次进入默认选中第一个已配置的工单来源
+        if (!providerInitialized) {
+          providerInitialized = true;
+          const status = await api.ticketsStatus();
+          const firstConfigured = status.providers.find((p) => p.configured);
+          if (firstConfigured && firstConfigured.id !== ticketProvider) {
+            setTicketProvider(firstConfigured.id);
+            return; // setTicketProvider 会触发本 effect 重跑
+          }
+        }
+      } catch {
+        // status 拉不到时保持默认来源
+      }
+      try {
+        await load();
+        if (!cancelled) setError("");
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "加载失败");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketProvider]);
 
   function applyPreset(preset: (typeof AGENT_PRESETS)[number]) {
     setPrompt(preset.prompt);
@@ -180,9 +219,20 @@ export function SchedulesPage() {
       setError("间隔须为 1 到 24 小时");
       return;
     }
-    if (kind === "ticket" && (!projectId || projectTaken)) return;
+    if (kind === "ticket" && (!projectId || projectTaken)) {
+      setError(
+        projectTaken
+          ? "该项目已有定时任务"
+          : "请先选择工单项目；若列表为空，请检查上方来源是否已配置凭证",
+      );
+      return;
+    }
     if (kind === "agent" && (!prompt.trim() || !botId || !workspaceId)) {
-      setError("请填写任务说明、智能体和工作区");
+      setError(
+        workspaceId
+          ? "请填写任务说明并选择智能体"
+          : "请先在「工作区」新建一个工作区，智能体定时任务需要工作目录",
+      );
       return;
     }
     setBusy("add");
@@ -237,10 +287,7 @@ export function SchedulesPage() {
   }
 
   const empty = ticketRows.length === 0 && agentRows.length === 0;
-  const addDisabled =
-    busy === "add" ||
-    (kind === "ticket" && (!projectId || projectTaken)) ||
-    (kind === "agent" && (!prompt.trim() || !botId || !workspaceId));
+  const addDisabled = busy === "add";
 
   return (
     <div className="page">
@@ -317,6 +364,16 @@ export function SchedulesPage() {
               </label>
               <HourField value={everyHours} onChange={setEveryHours} />
             </div>
+            {kind === "ticket" && projectsNotice ? (
+              <p className="form-status" role="status">
+                {projectsNotice}
+              </p>
+            ) : null}
+            {kind === "ticket" && !projectsNotice && projects.length === 0 ? (
+              <p className="form-status" role="status">
+                该来源下暂无项目；可切换来源，或到「设置 → 集成工单」检查凭证。
+              </p>
+            ) : null}
             <fieldset className="schedule-priority-field">
               <legend>优先级</legend>
               <div className="schedule-priority" role="radiogroup" aria-label="优先级">
