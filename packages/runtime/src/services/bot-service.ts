@@ -17,8 +17,8 @@ export interface CreateBotInput {
 export type UpdateBotInput = Partial<CreateBotInput>;
 
 const ROLE_DEFAULT_SKILLS: Record<string, string[]> = {
-  product: ["grill-me", "to-spec"],
-  developer: ["to-tickets"],
+  product: ["grill-me", "product-spec"],
+  developer: ["implement-ticket"],
   tester: ["agent-browser"],
   reviewer: ["code-review-expert"],
 };

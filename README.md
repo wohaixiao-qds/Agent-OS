@@ -19,7 +19,7 @@
 
 ![工作台与工单](apps/desktop/public/2.png)
 
-智能体配置：按角色绑定引擎与 Skills（如产品侧 `grill-me` / `to-spec`）。
+智能体配置：按角色绑定引擎与 Skills（如产品侧 `grill-me` / `product-spec`）。
 
 ![智能体配置](apps/desktop/public/1.jpg)
 
@@ -69,7 +69,7 @@ Windows 安装程序（NSIS）。
 2. 若系统「智能应用控制」拦截未签名程序，需本机放行或临时关闭后再启动
 3. **跑真实智能体**还需要：
   - 本机安装并登录 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)（`claude` 在 PATH），或 Codex CLI
-  - 在 **智能体** 页为各角色配置 Skills（产品默认提示：`grill-me`, `to-spec`；开发：`to-tickets`），保存完成安装
+  - 在 **智能体** 页为各角色配置 Skills（产品默认提示：`grill-me`, `product-spec`；开发：`implement-ticket`），保存完成安装
 4. **拉 Gitee 工单**需要：在 **设置 → 集成工单系统** 填写企业 Token / 企业 ID / 用户 ID，并为项目配置本地目录
 5. **飞书群协作（可选）**：需本机或环境具备飞书相关 Skill（如 `lark-cli` / `lark-doc`）及已接入的群机器人；未配置时不影响桌面工作台
 
@@ -173,8 +173,8 @@ Runtime 将 JSON 落在数据目录：
 | 角色     | `role`      | 默认 Skills 提示                    |
 | ------ | ----------- | ------------------------------- |
 | CEO 助理 | `ceo`       | 无需 Skill；依赖 MCP `dispatch_task` |
-| 产品经理   | `product`   | `grill-me`, `to-spec`           |
-| 开发工程师  | `developer` | `to-tickets`                    |
+| 产品经理   | `product`   | `grill-me`, `product-spec`      |
+| 开发工程师  | `developer` | `implement-ticket`              |
 | 测试工程师  | `tester`    | `agent-browser`                 |
 | 代码审查   | `reviewer`  | `code-review-expert`            |
 
