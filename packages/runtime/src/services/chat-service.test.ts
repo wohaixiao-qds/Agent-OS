@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { JsonStore } from "../store/json-store.js";
 import { BotService } from "./bot-service.js";
 import { WorkspaceService } from "./workspace-service.js";
-import { ChatService } from "./chat-service.js";
+import { ChatService, deriveTopicTitle } from "./chat-service.js";
 import { MockCliAdapter } from "../cli/mock-adapter.js";
 import type { AppState } from "../app-state.js";
 import type { ChatMessage } from "@ml-aos/shared";
@@ -145,6 +145,37 @@ describe("ChatService", () => {
     const topic = await chat.createTopic({ workspaceId, title: "T" });
     const result = await chat.abort(topic.id);
     expect(result).toEqual({ ok: true, aborted: false });
+  });
+
+  it("auto-titles a default topic from the first message", async () => {
+    const topic = await chat.createTopic({ workspaceId, title: "新话题" });
+    await chat.sendMessage(topic.id, {
+      content: "给登录页加手机号验证码\n次要：支持国际化",
+    });
+    const list = await chat.listTopics(workspaceId);
+    expect(list[0].title).toBe("给登录页加手机号验证码");
+  });
+
+  it("keeps the auto title on later messages", async () => {
+    const topic = await chat.createTopic({ workspaceId, title: "新需求话题" });
+    await chat.sendMessage(topic.id, { content: "第一句话" });
+    await chat.sendMessage(topic.id, { content: "第二句话" });
+    const list = await chat.listTopics(workspaceId);
+    expect(list[0].title).toBe("第一句话");
+  });
+
+  it("does not rename a custom title", async () => {
+    const topic = await chat.createTopic({ workspaceId, title: "自定义标题" });
+    await chat.sendMessage(topic.id, { content: "内容" });
+    const list = await chat.listTopics(workspaceId);
+    expect(list[0].title).toBe("自定义标题");
+  });
+
+  it("deriveTopicTitle strips leading mention and caps length", () => {
+    expect(deriveTopicTitle("@CEO助理 做一个登录页")).toBe("做一个登录页");
+    expect(deriveTopicTitle("  \n\n第二行才是内容")).toBe("第二行才是内容");
+    expect(deriveTopicTitle("长".repeat(80)).length).toBe(40);
+    expect(deriveTopicTitle("   ")).toBe("");
   });
 
   it("deletes a topic and its messages and pipeline", async () => {

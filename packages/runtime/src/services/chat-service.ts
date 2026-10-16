@@ -23,11 +23,26 @@ export interface SendMessageInput {
 
 export type ChatEvent =
   | { type: "message.upsert"; message: ChatMessage }
+  | { type: "topic.update"; topic: Topic }
   | {
       type: "pipeline.update";
       topicId: string;
       pipelineStage: Topic["pipelineStage"];
     };
+
+const DEFAULT_TOPIC_TITLES = new Set(["新话题", "新需求话题", "New topic"]);
+const AUTO_TITLE_MAX = 40;
+
+/** First meaningful line without a leading @mention, capped for the sidebar. */
+export function deriveTopicTitle(content: string): string {
+  const firstLine =
+    content
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean) ?? "";
+  const withoutMention = firstLine.replace(/^@[^\s@]+\s*/, "").trim();
+  return (withoutMention || firstLine).slice(0, AUTO_TITLE_MAX);
+}
 
 export class ChatService {
   private readonly botRun: BotRunService;
@@ -191,6 +206,8 @@ export class ChatService {
       }
     }
 
+    await this.autoTitleTopic(topic, input.content);
+
     if (!input.mentionBotId) {
       return [userMessage];
     }
@@ -223,5 +240,20 @@ export class ChatService {
     });
     this.emit?.({ type: "message.upsert", message });
     return message;
+  }
+
+  /** Replace a default topic title with one derived from the first message. */
+  private async autoTitleTopic(topic: Topic, content: string): Promise<void> {
+    if (!DEFAULT_TOPIC_TITLES.has(topic.title)) return;
+    const title = deriveTopicTitle(content);
+    if (!title) return;
+    let updated: Topic | undefined;
+    await this.store.transact((state) => {
+      const target = state.topics.find((t) => t.id === topic.id);
+      if (!target || !DEFAULT_TOPIC_TITLES.has(target.title)) return;
+      target.title = title;
+      updated = target;
+    });
+    if (updated) this.emit?.({ type: "topic.update", topic: updated });
   }
 }

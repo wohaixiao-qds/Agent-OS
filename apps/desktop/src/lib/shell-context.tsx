@@ -59,6 +59,7 @@ const ShellContext = createContext<ShellContextValue | null>(null);
 
 type WsPayload =
   | { type: "message.upsert"; message: ChatMessage }
+  | { type: "topic.update"; topic: Topic }
   | {
       type: "pipeline.update";
       topicId: string;
@@ -288,6 +289,13 @@ export function ShellProvider({ children }: { children: ReactNode }) {
           ) {
             void refreshPending();
           }
+          return;
+        }
+
+        if (event.type === "topic.update") {
+          setTopics((prev) =>
+            prev.map((t) => (t.id === event.topic.id ? event.topic : t)),
+          );
           return;
         }
 
