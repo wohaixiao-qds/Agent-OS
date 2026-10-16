@@ -1741,6 +1741,10 @@
   background: var(--accent-soft);
 }
 
+.mention-picker li.active button {
+  background: var(--accent-soft);
+}
+
 /* ——— Right panel ——— */
 .right-panel {
   background: var(--bg-pane);

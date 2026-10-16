@@ -21,6 +21,7 @@ export function Composer({
   const [mentionBotId, setMentionBotId] = useState<string | undefined>();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [filter, setFilter] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const footerRef = useRef<HTMLElement>(null);
@@ -74,7 +75,11 @@ export function Composer({
 
   function openPicker(fromAt = false) {
     setPickerOpen(true);
+    setActiveIndex(0);
     setFilter(fromAt ? "" : filter);
+    // Clicking the @ button leaves focus on the button; move it back so the
+    // textarea keyboard handler drives the picker immediately.
+    textareaRef.current?.focus();
   }
 
   function pickBot(bot: BotConfig) {
@@ -93,6 +98,7 @@ export function Composer({
     const atMatch = value.match(/@([^\s@]*)$/);
     if (atMatch) {
       setPickerOpen(true);
+      setActiveIndex(0);
       setFilter(atMatch[1] ?? "");
     } else if (pickerOpen && !value.includes("@")) {
       setPickerOpen(false);
@@ -105,6 +111,8 @@ export function Composer({
     if (!content || disabled || sending) return;
     onSend(content, mentionBotId);
     setText("");
+    // Mentions are one-shot: clear after send so the chip does not linger.
+    setMentionBotId(undefined);
     setPickerOpen(false);
     setFilter("");
   }
@@ -133,8 +141,14 @@ export function Composer({
             {filtered.length === 0 ? (
               <li className="muted">暂无已启用的智能体</li>
             ) : (
-              filtered.map((bot) => (
-                <li key={bot.id}>
+              filtered.map((bot, index) => (
+                <li
+                  key={bot.id}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  className={index === activeIndex ? "active" : undefined}
+                  onMouseEnter={() => setActiveIndex(index)}
+                >
                   <button type="button" onClick={() => pickBot(bot)}>
                     <strong>@{bot.name}</strong>
                     <span className="muted">{bot.role}</span>
@@ -157,9 +171,35 @@ export function Composer({
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
               handleSend();
+              return;
             }
-            if (e.key === "@" && !pickerOpen) {
-              openPicker(true);
+            if (pickerOpen && filtered.length > 0) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setActiveIndex((i) => (i + 1) % filtered.length);
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length);
+                return;
+              }
+              if (e.key === "Enter" || e.key === "Tab") {
+                e.preventDefault();
+                pickBot(filtered[Math.min(activeIndex, filtered.length - 1)]);
+                return;
+              }
+            }
+            // Enter sends, Shift+Enter inserts a newline. Never send while
+            // an IME is composing (Enter then confirms the composition).
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              handleSend();
+              return;
+            }
+            if (e.key === "@") {
+              if (!pickerOpen) openPicker(true);
+              return;
             }
             if (e.key === "Escape") {
               setPickerOpen(false);
@@ -210,7 +250,7 @@ export function Composer({
         </div>
       </div>
       <p className="composer-hint">
-        Ctrl / ⌘ + Enter 发送 · 智能体执行可能需要几分钟
+        Enter 发送 · Shift + Enter 换行 · 智能体执行可能需要几分钟
       </p>
     </footer>
   );
