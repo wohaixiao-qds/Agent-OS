@@ -17,8 +17,10 @@ vi.mock("../../lib/shell-context", () => ({
 vi.mock("../../lib/api", () => ({
   api: {
     ticketsStatus: vi.fn(async () => ({
-      configured: true,
-      projectsPath: "config/gitee-projects.json",
+      providers: [
+        { id: "gitee", label: "Gitee", configured: true },
+        { id: "zentao", label: "禅道", configured: false },
+      ],
     })),
     listTicketProjects: vi.fn(async () => [
       {
@@ -123,7 +125,11 @@ describe("TicketInbox (API)", () => {
       await Promise.resolve();
     });
 
-    expect(api.listTicketIssueStates).toHaveBeenCalledWith("hangyan", 101);
+    expect(api.listTicketIssueStates).toHaveBeenCalledWith(
+      "gitee",
+      "hangyan",
+      "101",
+    );
     expect(container.textContent).toContain("完成");
   });
 });

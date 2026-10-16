@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "../../lib/api";
+import { api, type TicketProviderId, type TicketsStatus } from "../../lib/api";
 import { useShell } from "../../lib/shell-context";
 import { IconActivity, IconSettings, IconTicket } from "../shell/icons";
 import { groupTicketsBySprint } from "./ticket-mock";
@@ -12,6 +12,11 @@ import type { TicketDetail, TicketItem, TicketProject } from "./ticket-types";
 type TicketInboxProps = {
   onCollapse: () => void;
 };
+
+const PROVIDERS: Array<{ id: TicketProviderId; label: string }> = [
+  { id: "gitee", label: "Gitee" },
+  { id: "zentao", label: "禅道" },
+];
 
 function toProject(row: Awaited<ReturnType<typeof api.listTicketProjects>>[number]): TicketProject {
   return {
@@ -29,6 +34,7 @@ function toProject(row: Awaited<ReturnType<typeof api.listTicketProjects>>[numbe
 
 function toTicket(row: Awaited<ReturnType<typeof api.listTicketTodos>>[number]): TicketItem {
   return {
+    key: row.key ?? String(row.id),
     id: row.id,
     ident: row.ident,
     title: row.title,
@@ -39,6 +45,7 @@ function toTicket(row: Awaited<ReturnType<typeof api.listTicketTodos>>[number]):
     url: row.url,
     priority: row.priority ?? "未设置",
     priorityRank: row.priorityRank,
+    kind: row.kind,
     topicId: row.topicId,
     pipelineStage: row.pipelineStage as TicketItem["pipelineStage"],
   };
@@ -48,7 +55,7 @@ function toDetail(
   row: Awaited<ReturnType<typeof api.getTicketDetail>>,
 ): TicketDetail {
   return {
-    ...toTicket(row),
+    ...toTicket(row as Awaited<ReturnType<typeof api.listTicketTodos>>[number]),
     description: row.description ?? "",
     authorName: row.authorName ?? "未知",
     planStartedAt: row.planStartedAt,
@@ -65,10 +72,12 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     refreshAll,
   } = useShell();
 
+  const [provider, setProvider] = useState<TicketProviderId>("gitee");
+  const [providerStatus, setProviderStatus] = useState<TicketsStatus["providers"]>([]);
   const [projects, setProjects] = useState<TicketProject[]>([]);
   const [projectId, setProjectId] = useState("");
   const [tickets, setTickets] = useState<TicketItem[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [statePickerOpen, setStatePickerOpen] = useState(false);
   const [statePickerTicket, setStatePickerTicket] = useState<TicketItem | null>(
@@ -79,7 +88,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detail, setDetail] = useState<TicketDetail | null>(null);
-  const [notesByIssueId, setNotesByIssueId] = useState<Record<number, string>>(
+  const [notesByTicketKey, setNotesByTicketKey] = useState<Record<string, string>>(
     {},
   );
   const [notice, setNotice] = useState<string | null>(null);
@@ -87,17 +96,21 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   const [todosLoading, setTodosLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [includeAll, setIncludeAll] = useState(false);
-  const [giteeOk, setGiteeOk] = useState(true);
+
+  const providerLabel =
+    PROVIDERS.find((p) => p.id === provider)?.label ?? provider;
+  const configured =
+    providerStatus.find((p) => p.id === provider)?.configured ?? true;
 
   const project = projects.find((p) => p.id === projectId) ?? null;
   const groups = useMemo(() => groupTicketsBySprint(tickets), [tickets]);
   const selected =
-    tickets.find((t) => t.id === selectedId) ?? tickets[0] ?? null;
+    tickets.find((t) => t.key === selectedKey) ?? tickets[0] ?? null;
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (target: TicketProviderId) => {
     const status = await api.ticketsStatus();
-    setGiteeOk(status.configured);
-    const list = (await api.listTicketProjects()).map(toProject);
+    setProviderStatus(status.providers);
+    const list = (await api.listTicketProjects(target)).map(toProject);
     setProjects(list);
     setProjectId((prev) =>
       list.some((p) => p.id === prev) ? prev : (list[0]?.id ?? ""),
@@ -105,15 +118,15 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   }, []);
 
   const loadTodos = useCallback(
-    async (id: string, all: boolean) => {
+    async (target: TicketProviderId, id: string, all: boolean) => {
       if (!id) {
         setTickets([]);
         return;
       }
-      const list = (await api.listTicketTodos(id, { all })).map(toTicket);
+      const list = (await api.listTicketTodos(target, id, { all })).map(toTicket);
       setTickets(list);
-      setSelectedId((prev) =>
-        list.some((t) => t.id === prev) ? prev : (list[0]?.id ?? null),
+      setSelectedKey((prev) =>
+        list.some((t) => t.key === prev) ? prev : (list[0]?.key ?? null),
       );
     },
     [],
@@ -122,9 +135,12 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setProjects([]);
+    setTickets([]);
+    setProjectId("");
     void (async () => {
       try {
-        await loadProjects();
+        await loadProjects(provider);
         if (!cancelled) setNotice(null);
       } catch (error) {
         if (!cancelled) {
@@ -138,7 +154,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     return () => {
       cancelled = true;
     };
-  }, [loadProjects]);
+  }, [provider, loadProjects]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -146,7 +162,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     setTodosLoading(true);
     void (async () => {
       try {
-        await loadTodos(projectId, includeAll);
+        await loadTodos(provider, projectId, includeAll);
         if (!cancelled) setNotice(null);
       } catch (error) {
         if (!cancelled) {
@@ -160,18 +176,18 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     return () => {
       cancelled = true;
     };
-  }, [projectId, includeAll, loadTodos]);
+  }, [provider, projectId, includeAll, loadTodos]);
 
   async function openDetail(ticket: TicketItem) {
     if (!project) return;
-    setSelectedId(ticket.id);
+    setSelectedKey(ticket.key);
     setDetailOpen(true);
     setDetailLoading(true);
     setDetailError(null);
     setDetail(null);
     setNotice(null);
     try {
-      const row = await api.getTicketDetail(project.id, ticket.id);
+      const row = await api.getTicketDetail(provider, project.id, ticket.key);
       setDetail(toDetail(row));
     } catch (error) {
       setDetailError(
@@ -191,16 +207,17 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     }
     setBusy(true);
     setNotice(null);
-    const note = notesByIssueId[ticket.id]?.trim() || undefined;
+    const note = notesByTicketKey[ticket.key]?.trim() || undefined;
     try {
       const result = await api.dispatchTicket({
+        provider,
         projectId: project.id,
-        issueId: ticket.id,
+        issueKey: ticket.key,
         workspaceId: workspace?.id,
         note,
       });
       await refreshAll();
-      await loadTodos(project.id, includeAll);
+      await loadTodos(provider, project.id, includeAll);
       selectTopic(result.topicId);
       const workspaces = await api.listWorkspaces();
       const matched = workspaces.find((w) =>
@@ -208,9 +225,9 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         project.localPath!.replace(/\\/g, "/").toLowerCase(),
       );
       if (matched) setWorkspaceId(matched.id);
-      setNotesByIssueId((prev) => {
+      setNotesByTicketKey((prev) => {
         const next = { ...prev };
-        delete next[ticket.id];
+        delete next[ticket.key];
         return next;
       });
       setDetailOpen(false);
@@ -224,7 +241,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
 
   async function handleSaveProject(next: TicketProject) {
     const saved = toProject(
-      await api.updateTicketProject(next.id, {
+      await api.updateTicketProject(provider, next.id, {
         localPath: next.localPath,
         defaultEngine: next.defaultEngine,
         cast: next.cast,
@@ -255,9 +272,11 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
               setTodosLoading(true);
               void (async () => {
                 try {
-                  await loadProjects();
-                  if (projectId) await loadTodos(projectId, includeAll);
-                  setNotice("已从 Gitee 刷新项目列表");
+                  await loadProjects(provider);
+                  if (projectId) {
+                    await loadTodos(provider, projectId, includeAll);
+                  }
+                  setNotice(`已从 ${providerLabel} 刷新项目列表`);
                 } catch (error) {
                   setNotice(
                     error instanceof Error ? error.message : "刷新失败",
@@ -302,6 +321,39 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         </div>
       </header>
 
+      <div
+        className="ticket-provider-tabs"
+        role="tablist"
+        aria-label="工单来源"
+      >
+        {PROVIDERS.map((item) => {
+          const active = item.id === provider;
+          const ok =
+            providerStatus.find((p) => p.id === item.id)?.configured ?? true;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              className={
+                active ? "ticket-provider-tab is-active" : "ticket-provider-tab"
+              }
+              onClick={() => {
+                if (!active) {
+                  setProvider(item.id);
+                  setSelectedKey(null);
+                  setNotice(null);
+                }
+              }}
+            >
+              {item.label}
+              {!ok ? <span className="ticket-provider-dot" aria-label="未配置" /> : null}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="ticket-project-bar">
         <label className="ticket-project-select">
           <span className="sr-only">工单项目</span>
@@ -310,7 +362,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
             disabled={projects.length === 0 || todosLoading}
             onChange={(e) => {
               setProjectId(e.target.value);
-              setSelectedId(null);
+              setSelectedKey(null);
               setNotice(null);
             }}
           >
@@ -359,9 +411,11 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
           {notice}
         </p>
       ) : null}
-      {!giteeOk && !notice ? (
+      {!configured && !notice ? (
         <p className="ticket-notice" role="status">
-          未检测到 Gitee 环境变量。请在项目根 `.env` 配置 MI_CLAW_GITEE_TOKEN 等。
+          {provider === "gitee"
+            ? "未检测到 Gitee 环境变量。请在「设置 → 集成工单系统」或项目根 `.env` 配置凭证。"
+            : "禅道未配置。请在「设置 → 集成工单系统」填写服务地址、账号与密码。"}
         </p>
       ) : null}
 
@@ -374,7 +428,9 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         ) : groups.length === 0 ? (
           <p className="ticket-empty-hint">
             {projects.length === 0
-              ? "未拉到 Gitee 项目。请检查 .env 凭证，或点刷新；也可放一份可选白名单 config/gitee-projects.json。"
+              ? provider === "gitee"
+                ? "未拉到 Gitee 项目。请检查凭证，或点刷新；也可放一份可选白名单 config/gitee-projects.json。"
+                : "未拉到禅道项目。请检查服务地址与账号权限，或点刷新。"
               : "当前项目没有待办工单。"}
           </p>
         ) : (
@@ -391,10 +447,10 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
               </header>
               <ul className="ticket-card-list">
                 {group.tickets.map((ticket, index) => {
-                  const active = selected?.id === ticket.id;
+                  const active = selected?.key === ticket.key;
                   return (
                     <li
-                      key={ticket.id}
+                      key={ticket.key}
                       className={
                         active ? "ticket-card is-active" : "ticket-card"
                       }
@@ -406,6 +462,17 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                         onClick={() => void openDetail(ticket)}
                       >
                         <div className="ticket-card-top">
+                          {ticket.kind ? (
+                            <span
+                              className={
+                                ticket.kind === "bug"
+                                  ? "ticket-kind-chip is-bug"
+                                  : "ticket-kind-chip is-task"
+                              }
+                            >
+                              {ticket.kind === "bug" ? "缺陷" : "任务"}
+                            </span>
+                          ) : null}
                           <span className="ticket-ident mono">{ticket.ident}</span>
                           <span
                             className={`ticket-priority-badge is-rank-${Math.min(3, Math.floor((ticket.priorityRank ?? 40) / 10))}`}
@@ -433,7 +500,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                           className="ticket-change-state"
                           disabled={busy}
                           onClick={() => {
-                            setSelectedId(ticket.id);
+                            setSelectedKey(ticket.key);
                             setStatePickerTicket(ticket);
                             setStatePickerOpen(true);
                             setNotice(null);
@@ -456,16 +523,16 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         loading={detailLoading}
         error={detailError}
         detail={detail}
-        note={detail ? (notesByIssueId[detail.id] ?? "") : ""}
+        note={detail ? (notesByTicketKey[detail.key] ?? "") : ""}
         onNoteChange={(value) => {
           if (!detail) return;
-          setNotesByIssueId((prev) => ({ ...prev, [detail.id]: value }));
+          setNotesByTicketKey((prev) => ({ ...prev, [detail.key]: value }));
         }}
         onClose={() => {
           if (detail) {
-            setNotesByIssueId((prev) => {
+            setNotesByTicketKey((prev) => {
               const next = { ...prev };
-              delete next[detail.id];
+              delete next[detail.key];
               return next;
             });
           }
@@ -480,6 +547,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
       />
       <TicketStatePicker
         open={statePickerOpen}
+        provider={provider}
         projectId={project?.id ?? null}
         ticket={statePickerTicket}
         onClose={() => {
@@ -489,7 +557,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         onApplied={(stateTitle) => {
           setNotice(`已同步：${stateTitle}`);
           if (project) {
-            void loadTodos(project.id, includeAll).catch((error) => {
+            void loadTodos(provider, project.id, includeAll).catch((error) => {
               setNotice(
                 error instanceof Error ? error.message : "刷新工单失败",
               );

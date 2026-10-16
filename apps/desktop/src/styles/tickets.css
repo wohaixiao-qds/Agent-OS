@@ -18,6 +18,67 @@
     var(--bg-pane);
 }
 
+/* 来源 Tab（Gitee / 禅道） */
+.ticket-provider-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ticket-provider-tab {
+  appearance: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticket-provider-tab:hover {
+  color: var(--text);
+}
+
+.ticket-provider-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.ticket-provider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  display: inline-block;
+}
+
+/* 禅道对象类型徽章 */
+.ticket-kind-chip {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.ticket-kind-chip.is-bug {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.ticket-kind-chip.is-task {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
 .ticket-inbox-header {
   display: flex;
   align-items: center;

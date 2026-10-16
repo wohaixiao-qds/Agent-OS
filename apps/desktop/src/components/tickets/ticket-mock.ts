@@ -23,7 +23,8 @@ export const MOCK_TICKET_PROJECTS: TicketProject[] = [
 
 export const MOCK_TICKETS: TicketItem[] = [
   {
-    id: 101,
+    key: "101",
+  id: 101,
     ident: "IHY-128",
     title: "登录页支持邮箱验证码",
     stateTitle: "待办",
@@ -35,7 +36,8 @@ export const MOCK_TICKETS: TicketItem[] = [
     priorityRank: 0,
   },
   {
-    id: 102,
+    key: "102",
+  id: 102,
     ident: "IHY-131",
     title: "工单派发后写入话题来源元数据",
     stateTitle: "待办",
@@ -49,7 +51,8 @@ export const MOCK_TICKETS: TicketItem[] = [
     pipelineStage: "developing",
   },
   {
-    id: 103,
+    key: "103",
+  id: 103,
     ident: "IHY-140",
     title: "右栏工单状态浮层展示引擎与目录",
     stateTitle: "待办",
@@ -61,7 +64,8 @@ export const MOCK_TICKETS: TicketItem[] = [
     priorityRank: 20,
   },
   {
-    id: 201,
+    key: "201",
+  id: 201,
     ident: "AOS-22",
     title: "压缩会话 /compact 对齐 Codex",
     stateTitle: "待办",

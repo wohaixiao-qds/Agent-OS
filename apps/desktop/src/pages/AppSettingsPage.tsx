@@ -5,6 +5,8 @@ import {
   api,
   type GiteeIntegrationSettings,
   type UpdateGiteeIntegrationInput,
+  type ZentaoIntegrationSettings,
+  type UpdateZentaoIntegrationInput,
 } from "../lib/api";
 import type { ThemeMode } from "../lib/theme";
 import { pickFolder } from "../lib/tauri";
@@ -32,6 +34,11 @@ export function AppSettingsPage() {
   const [apiBase, setApiBase] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [giteeError, setGiteeError] = useState<string | null>(null);
+  const [zentao, setZentao] = useState<ZentaoIntegrationSettings | null>(null);
+  const [zentaoBaseUrl, setZentaoBaseUrl] = useState("");
+  const [zentaoAccount, setZentaoAccount] = useState("");
+  const [zentaoPasswordDraft, setZentaoPasswordDraft] = useState("");
+  const [zentaoError, setZentaoError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -69,10 +76,30 @@ export function AppSettingsPage() {
             : message,
         );
       });
+    api
+      .getZentaoIntegration()
+      .then((integration) => {
+        if (cancelled) return;
+        setZentaoError(null);
+        applyZentaoView(integration);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setZentaoError(
+          err instanceof Error ? err.message : "加载禅道配置失败",
+        );
+      });
     return () => {
       cancelled = true;
     };
   }, [theme]);
+
+  function applyZentaoView(integration: ZentaoIntegrationSettings) {
+    setZentao(integration);
+    setZentaoBaseUrl(integration.baseUrl);
+    setZentaoAccount(integration.account);
+    setZentaoPasswordDraft(integration.passwordMasked ?? "");
+  }
 
   function applyGiteeView(integration: GiteeIntegrationSettings) {
     setGitee(integration);
@@ -179,6 +206,76 @@ export function AppSettingsPage() {
       const saved = await api.patchGiteeIntegration(patch);
       applyGiteeView(saved);
       const result = await api.testGiteeConnection();
+      setStatus(result.message);
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : "测试失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function persistZentao(extra?: UpdateZentaoIntegrationInput) {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const patch: UpdateZentaoIntegrationInput = {
+        baseUrl: zentaoBaseUrl.trim(),
+        account: zentaoAccount.trim(),
+        ...extra,
+      };
+      const trimmed = zentaoPasswordDraft.trim();
+      if (
+        trimmed &&
+        !trimmed.startsWith(TOKEN_PLACEHOLDER) &&
+        trimmed !== (zentao?.passwordMasked ?? "")
+      ) {
+        patch.password = trimmed;
+      }
+      const saved = await api.patchZentaoIntegration(patch);
+      setZentaoError(null);
+      applyZentaoView(saved);
+      setStatus("禅道配置已保存");
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearZentaoPassword() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const saved = await api.patchZentaoIntegration({ clearPassword: true });
+      applyZentaoView(saved);
+      setZentaoPasswordDraft("");
+      setStatus("已清除存档中的密码（环境变量不受影响）");
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : "清除失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testZentao() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const patch: UpdateZentaoIntegrationInput = {
+        baseUrl: zentaoBaseUrl.trim(),
+        account: zentaoAccount.trim(),
+      };
+      const trimmed = zentaoPasswordDraft.trim();
+      if (
+        trimmed &&
+        !trimmed.startsWith(TOKEN_PLACEHOLDER) &&
+        trimmed !== (zentao?.passwordMasked ?? "")
+      ) {
+        patch.password = trimmed;
+      }
+      const saved = await api.patchZentaoIntegration(patch);
+      applyZentaoView(saved);
+      const result = await api.testZentaoConnection();
       setStatus(result.message);
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : "测试失败");
@@ -348,6 +445,96 @@ export function AppSettingsPage() {
           </button>
         </div>
         {status ? <p className="form-status">{status}</p> : null}
+
+        <h3 className="section-title" style={{ marginTop: 8 }}>禅道</h3>
+        <p className="field-hint">
+          填写禅道服务地址（如 http://zentao.corp.local）与账号密码。认证使用
+          REST API（api.php/v1），密码只保存在本机数据目录；HTTP
+          地址为明文传输，建议内网可信环境或启用 HTTPS。
+        </p>
+
+        {zentaoError ? <p className="form-error">{zentaoError}</p> : null}
+
+        {zentao?.envOverridesActive ? (
+          <p className="form-status">
+            当前有环境变量覆盖存档（
+            {[
+              zentao.sources.baseUrl === "env" ? "baseUrl" : null,
+              zentao.sources.account === "env" ? "account" : null,
+              zentao.sources.password === "env" ? "password" : null,
+            ]
+              .filter(Boolean)
+              .join("、")}
+            ）。测连通与工单将以环境变量为准（ZY_AOS_ZENTAO_*）。
+          </p>
+        ) : null}
+
+        <label className="field">
+          <span>服务地址</span>
+          <input
+            className="mono"
+            placeholder="http://zentao.corp.local"
+            value={zentaoBaseUrl}
+            disabled={busy}
+            onChange={(e) => setZentaoBaseUrl(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>账号</span>
+          <input
+            className="mono"
+            value={zentaoAccount}
+            disabled={busy}
+            onChange={(e) => setZentaoAccount(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>密码</span>
+          <input
+            type="password"
+            autoComplete="off"
+            placeholder={
+              zentao?.passwordMasked
+                ? "已保存，留空或保持遮罩则不修改"
+                : "输入禅道账号密码"
+            }
+            value={zentaoPasswordDraft}
+            disabled={busy}
+            onChange={(e) => setZentaoPasswordDraft(e.target.value)}
+            onFocus={() => {
+              if (zentaoPasswordDraft.startsWith(TOKEN_PLACEHOLDER)) {
+                setZentaoPasswordDraft("");
+              }
+            }}
+          />
+        </label>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={busy || !zentao?.passwordMasked}
+            onClick={() => void clearZentaoPassword()}
+          >
+            清除存档密码
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={busy}
+            onClick={() => void testZentao()}
+          >
+            测试连接
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={busy}
+            onClick={() => void persistZentao()}
+          >
+            保存禅道配置
+          </button>
+        </div>
 
         <h3 className="section-title" style={{ marginTop: 8 }}>
           项目绑定

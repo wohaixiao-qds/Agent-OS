@@ -31,8 +31,12 @@ export interface TicketProject {
 }
 
 export interface TicketItem {
+  /** Detail/state/dispatch 用的稳定键。Gitee: String(id)；禅道: BUG-/TASK-。 */
+  key: string;
   id: number;
   ident: string;
+  /** 禅道行携带对象类型徽章。 */
+  kind?: "bug" | "task";
   title: string;
   stateTitle: string;
   sprintId?: number;

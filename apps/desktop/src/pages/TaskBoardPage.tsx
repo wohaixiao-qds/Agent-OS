@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useShell } from "../lib/shell-context";
 import type {
+  BoardExternalRef,
   BoardFailureReason,
+  BoardGiteeRef,
   BoardSummary,
   BoardTask,
   BoardTaskStatus,
@@ -33,6 +35,7 @@ function statusLabel(status: BoardTaskStatus): string {
 
 function sourceLabel(source: BoardTask["source"]): string {
   if (source === "gitee") return "Gitee";
+  if (source === "zentao") return "禅道";
   if (source === "pipeline") return "流水线";
   return "直接";
 }
@@ -46,12 +49,13 @@ function failureLabel(reason?: BoardFailureReason): string {
   return "未知";
 }
 
+function ticketRef(task: BoardTask): BoardExternalRef | BoardGiteeRef | undefined {
+  return task.external ?? task.gitee;
+}
+
 function needsGiteeSync(task: BoardTask): boolean {
-  return (
-    task.status === "completed" &&
-    Boolean(task.gitee) &&
-    task.gitee?.lastSyncedStateId == null
-  );
+  const ref = ticketRef(task);
+  return task.status === "completed" && Boolean(ref) && ref?.lastSyncedStateId == null;
 }
 
 function formatTime(iso?: string): string {
@@ -250,19 +254,19 @@ export function TaskBoardPage() {
                     <dd>{formatTime(selected.completedAt)}</dd>
                   </div>
                 ) : null}
-                {selected.gitee ? (
+                {ticketRef(selected) ? (
                   <div>
                     <dt>工单</dt>
                     <dd>
                       <a
-                        href={selected.gitee.url}
+                        href={ticketRef(selected)!.url}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {selected.gitee.issueIdent}
+                        {ticketRef(selected)!.issueIdent}
                       </a>
-                      {selected.gitee.lastSyncedStateTitle
-                        ? ` · 已同步：${selected.gitee.lastSyncedStateTitle}`
+                      {ticketRef(selected)!.lastSyncedStateTitle
+                        ? ` · 已同步：${ticketRef(selected)!.lastSyncedStateTitle}`
                         : needsGiteeSync(selected)
                           ? " · 待改状态"
                           : null}

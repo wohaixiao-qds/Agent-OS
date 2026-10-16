@@ -20,12 +20,26 @@ export interface BoardGiteeRef {
   lastSyncedAt?: string;
 }
 
+/** Provider-agnostic ticket reference (ADR-0007). */
+export interface BoardExternalRef {
+  provider: "gitee" | "zentao";
+  projectId: string;
+  issueId?: number;
+  issueIdent: string;
+  url: string;
+  lastSyncedStateId?: number;
+  lastSyncedStateTitle?: string;
+  lastSyncedAt?: string;
+}
+
 export interface BoardTask {
   id: string;
   title: string;
   status: BoardTaskStatus;
-  source: "gitee" | "pipeline" | "direct";
+  source: "gitee" | "zentao" | "pipeline" | "direct";
   gitee?: BoardGiteeRef;
+  /** 来源工单引用（ADR-0007）；gitee 行同时保留镜像字段。 */
+  external?: BoardExternalRef;
   topicId?: string;
   pipelineId?: string;
   botId?: string;

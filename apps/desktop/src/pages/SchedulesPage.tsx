@@ -5,6 +5,7 @@ import {
   type AgentScheduleTask,
   type TicketPullPriority,
   type TicketPullTask,
+  type TicketProviderId,
 } from "../lib/api";
 import { useShell } from "../lib/shell-context";
 
@@ -69,6 +70,8 @@ export function SchedulesPage() {
   const navigate = useNavigate();
   const { selectTopic } = useShell();
   const [kind, setKind] = useState<ScheduleKind>("ticket");
+  const [ticketProvider, setTicketProvider] =
+    useState<TicketProviderId>("gitee");
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string }>>([]);
   const [bots, setBots] = useState<Array<{ id: string; name: string; role: string; enabled: boolean }>>([]);
@@ -85,7 +88,11 @@ export function SchedulesPage() {
 
   const enabledBots = bots.filter((bot) => bot.enabled);
   const selected = projects.find((item) => item.id === projectId) ?? null;
-  const projectTaken = ticketRows.some((row) => row.projectId === projectId);
+  const projectTaken = ticketRows.some(
+    (row) =>
+      (row.provider ?? "gitee") === ticketProvider &&
+      row.projectId === projectId,
+  );
   const notes =
     kind === "ticket"
       ? [
@@ -113,13 +120,14 @@ export function SchedulesPage() {
   }, [bots]);
 
   async function load() {
-    const [projectList, tickets, agents, workspaceList, botList] = await Promise.all([
-      api.listTicketProjects(),
-      api.listTicketPulls(),
-      api.listAgentSchedules(),
-      api.listWorkspaces(),
-      api.listBots(),
-    ]);
+    const [projectList, tickets, agents, workspaceList, botList] =
+      await Promise.all([
+        api.listTicketProjects(ticketProvider),
+        api.listTicketPulls(),
+        api.listAgentSchedules(),
+        api.listWorkspaces(),
+        api.listBots(),
+      ]);
     setProjects(projectList);
     setTicketRows(tickets);
     setAgentRows(agents);
@@ -182,6 +190,7 @@ export function SchedulesPage() {
     try {
       if (kind === "ticket") {
         await api.createTicketPull({
+          provider: ticketProvider,
           projectId,
           everyHours: hours,
           priority,
@@ -274,6 +283,20 @@ export function SchedulesPage() {
         {kind === "ticket" ? (
           <>
             <div className="schedule-form-grid">
+              <label className="field">
+                <span>来源</span>
+                <select
+                  value={ticketProvider}
+                  onChange={(event) => {
+                    const next = event.target.value as TicketProviderId;
+                    setTicketProvider(next);
+                    setProjectId("");
+                  }}
+                >
+                  <option value="gitee">Gitee</option>
+                  <option value="zentao">禅道</option>
+                </select>
+              </label>
               <label className="field">
                 <span>项目</span>
                 <select

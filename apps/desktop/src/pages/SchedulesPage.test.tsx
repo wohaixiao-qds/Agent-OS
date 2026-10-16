@@ -104,6 +104,7 @@ describe("SchedulesPage", () => {
       add?.click();
     });
     expect(api.createTicketPull).toHaveBeenCalledWith({
+      provider: "gitee",
       projectId: "hangyan",
       everyHours: 1,
       priority: "none",

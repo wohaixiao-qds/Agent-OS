@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import type { TicketProviderId } from "../../lib/api";
 import type { TicketIssueState } from "./board-types";
 import type { TicketItem } from "./ticket-types";
 
 type TicketStatePickerProps = {
   open: boolean;
+  provider: TicketProviderId;
   projectId: string | null;
   ticket: TicketItem | null;
   onClose: () => void;
@@ -13,6 +15,7 @@ type TicketStatePickerProps = {
 
 export function TicketStatePicker({
   open,
+  provider,
   projectId,
   ticket,
   onClose,
@@ -37,7 +40,7 @@ export function TicketStatePicker({
     setError(null);
     setSelectedId(null);
     void api
-      .listTicketIssueStates(projectId, ticket.id)
+      .listTicketIssueStates(provider, projectId, ticket.key)
       .then((list) => {
         if (cancelled) return;
         setStates(list);
@@ -66,8 +69,9 @@ export function TicketStatePicker({
     setError(null);
     try {
       const result = await api.updateTicketIssueState(
+        provider,
         projectId,
-        ticket.id,
+        ticket.key,
         selectedId,
       );
       onApplied(result.stateTitle);

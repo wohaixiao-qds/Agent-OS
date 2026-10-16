@@ -24,6 +24,7 @@ export type TicketPullPriority = "severe" | "major" | "none";
 
 export type TicketPullTask = {
   id: string;
+  provider?: TicketProviderId;
   projectId: string;
   everyHours: number;
   priority: TicketPullPriority;
@@ -134,6 +135,38 @@ export type GiteeConnectionTestResult = {
   programCount?: number;
 };
 
+export type TicketProviderId = "gitee" | "zentao";
+
+export type ZentaoIntegrationSettings = {
+  baseUrl: string;
+  account: string;
+  passwordMasked?: string;
+  configured: boolean;
+  sources: {
+    baseUrl: "env" | "store" | "none";
+    account: "env" | "store" | "none";
+    password: "env" | "store" | "none";
+  };
+  envOverridesActive: boolean;
+  insecureHttp: boolean;
+};
+
+export type UpdateZentaoIntegrationInput = {
+  baseUrl?: string;
+  account?: string;
+  password?: string;
+  clearPassword?: boolean;
+};
+
+export type TicketsStatus = {
+  providers: Array<{
+    id: TicketProviderId;
+    label: string;
+    configured: boolean;
+    projectsPath?: string;
+  }>;
+};
+
 export const api = {
   baseUrl: BASE_URL,
 
@@ -207,6 +240,30 @@ export const api = {
 
   testGiteeConnection(): Promise<GiteeConnectionTestResult> {
     return request<GiteeConnectionTestResult>("/api/integrations/gitee/test", {
+      method: "POST",
+      body: "{}",
+    });
+  },
+
+  getZentaoIntegration(): Promise<ZentaoIntegrationSettings> {
+    return request<ZentaoIntegrationSettings>("/api/integrations/zentao");
+  },
+
+  patchZentaoIntegration(
+    patch: UpdateZentaoIntegrationInput,
+  ): Promise<ZentaoIntegrationSettings> {
+    return request<ZentaoIntegrationSettings>("/api/integrations/zentao", {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+  },
+
+  testZentaoConnection(): Promise<{
+    ok: boolean;
+    message: string;
+    projectCount?: number;
+  }> {
+    return request("/api/integrations/zentao/test", {
       method: "POST",
       body: "{}",
     });
@@ -367,6 +424,7 @@ export const api = {
   },
 
   createTicketPull(body: {
+    provider: TicketProviderId;
     projectId: string;
     everyHours: number;
     priority: TicketPullPriority;
@@ -413,11 +471,13 @@ export const api = {
     );
   },
 
-  ticketsStatus(): Promise<{ configured: boolean; projectsPath: string }> {
+  ticketsStatus(): Promise<TicketsStatus> {
     return request("/api/tickets/status");
   },
 
-  listTicketProjects(): Promise<
+  listTicketProjects(
+    provider: TicketProviderId = "gitee",
+  ): Promise<
     Array<{
       id: string;
       name: string;
@@ -430,10 +490,11 @@ export const api = {
       testStartCommand?: string;
     }>
   > {
-    return request("/api/tickets/projects");
+    return request(`/api/tickets/${provider}/projects`);
   },
 
   updateTicketProject(
+    provider: TicketProviderId,
     id: string,
     patch: {
       localPath?: string;
@@ -453,17 +514,22 @@ export const api = {
     testBaseUrl?: string;
     testStartCommand?: string;
   }> {
-    return request(`/api/tickets/projects/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch),
-    });
+    return request(
+      `/api/tickets/${provider}/projects/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      },
+    );
   },
 
   listTicketTodos(
+    provider: TicketProviderId,
     projectId: string,
     options?: { all?: boolean },
   ): Promise<
     Array<{
+      key: string;
       id: number;
       ident: string;
       title: string;
@@ -474,20 +540,23 @@ export const api = {
       url: string;
       priority: string;
       priorityRank: number;
+      kind?: "bug" | "task";
       topicId?: string;
       pipelineStage?: string;
     }>
   > {
     const q = options?.all ? "?all=1" : "";
     return request(
-      `/api/tickets/projects/${encodeURIComponent(projectId)}/todos${q}`,
+      `/api/tickets/${provider}/projects/${encodeURIComponent(projectId)}/todos${q}`,
     );
   },
 
   getTicketDetail(
+    provider: TicketProviderId,
     projectId: string,
     issueKey: string | number,
   ): Promise<{
+    key: string;
     id: number;
     ident: string;
     title: string;
@@ -498,6 +567,7 @@ export const api = {
     url: string;
     priority: string;
     priorityRank: number;
+    kind?: "bug" | "task";
     description: string;
     authorName: string;
     planStartedAt?: string;
@@ -507,13 +577,14 @@ export const api = {
     pipelineStage?: string;
   }> {
     return request(
-      `/api/tickets/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(String(issueKey))}`,
+      `/api/tickets/${provider}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(String(issueKey))}`,
     );
   },
 
   dispatchTicket(input: {
+    provider: TicketProviderId;
     projectId: string;
-    issueId: number;
+    issueKey: string;
     workspaceId?: string;
     note?: string;
   }): Promise<{ topicId: string; botId: string }> {
@@ -524,21 +595,23 @@ export const api = {
   },
 
   listTicketIssueStates(
+    provider: TicketProviderId,
     projectId: string,
     issueKey: string | number,
   ): Promise<TicketIssueState[]> {
     return request(
-      `/api/tickets/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(String(issueKey))}/states`,
+      `/api/tickets/${provider}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(String(issueKey))}/states`,
     );
   },
 
   updateTicketIssueState(
+    provider: TicketProviderId,
     projectId: string,
     issueKey: string | number,
     issueStateId: number,
   ): Promise<TicketIssueStateUpdate> {
     return request(
-      `/api/tickets/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(String(issueKey))}/state`,
+      `/api/tickets/${provider}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(String(issueKey))}/state`,
       {
         method: "POST",
         body: JSON.stringify({ issueStateId }),
