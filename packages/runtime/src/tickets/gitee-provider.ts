@@ -45,7 +45,7 @@ export class GiteeTicketProvider implements TicketProvider {
 
   constructor(private readonly projects: GiteeProjectsStore) {}
 
-  status(): { configured: boolean; projectsPath: string } {
+  async status(): Promise<{ configured: boolean; projectsPath: string }> {
     return {
       configured: giteeConfigured(),
       projectsPath:
@@ -53,7 +53,6 @@ export class GiteeTicketProvider implements TicketProvider {
         resolve(findWorkspaceRoot(), "config", "gitee-projects.json"),
     };
   }
-
   async listProjects(): Promise<TicketProject[]> {
     return (await this.projects.list()).map(toTicketProject);
   }

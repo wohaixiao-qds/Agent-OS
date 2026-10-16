@@ -29,7 +29,7 @@ export function registerTicketRoutes(
   service: TicketService,
 ): void {
   router.get("/api/tickets/status", async (_req, res) => {
-    sendJson(res, 200, service.status());
+    sendJson(res, 200, await service.status());
   });
 
   router.get("/api/tickets/:provider/projects", async (_req, res, params) => {

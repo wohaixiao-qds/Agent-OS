@@ -16,11 +16,14 @@ import { AgentScheduleService } from "./services/agent-schedule.js";
 import { ClarificationService } from "./services/clarification-service.js";
 import { TicketService } from "./services/ticket-service.js";
 import { GiteeTicketProvider } from "./tickets/gitee-provider.js";
+import { ZentaoTicketProvider } from "./tickets/zentao-provider.js";
 import { TaskBoardService } from "./services/task-board-service.js";
 import { AcceptanceService } from "./services/acceptance-service.js";
 import { AcceptanceRunner } from "./services/acceptance-runner.js";
 import { GiteeProjectsStore } from "./gitee/projects.js";
 import { setGiteeCredentialsDataDir } from "./gitee/credentials.js";
+import { ZentaoProjectsStore } from "./zentao/projects.js";
+import { setZentaoCredentialsDataDir } from "./zentao/credentials.js";
 import { createRouter } from "./http/router.js";
 import { applyCors, sendJson } from "./http/json.js";
 import { registerWorkspaceRoutes } from "./routes/workspaces.js";
@@ -30,6 +33,7 @@ import { registerPipelineRoutes } from "./routes/pipelines.js";
 import { registerClarificationRoutes } from "./routes/clarifications.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerGiteeIntegrationRoutes } from "./routes/gitee-integration.js";
+import { registerZentaoIntegrationRoutes } from "./routes/zentao-integration.js";
 import { registerControlRoutes } from "./routes/controls.js";
 import { registerDialogRoutes } from "./routes/dialog.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -40,6 +44,7 @@ import { registerAgentScheduleRoutes } from "./routes/agent-schedules.js";
 import { registerAcceptanceRoutes } from "./routes/acceptance.js";
 import { SettingsService } from "./services/settings-service.js";
 import { GiteeIntegrationService } from "./services/gitee-integration-service.js";
+import { ZentaoIntegrationService } from "./services/zentao-integration-service.js";
 import { AuthService } from "./services/auth-service.js";
 import { attachWebSocket } from "./ws.js";
 import { SkillLibrary } from "./services/skill-install.js";
@@ -51,6 +56,7 @@ const PORT = 17890;
 
 const dataDir = process.env.ZY_AOS_DATA_DIR ?? join(process.cwd(), "data");
 setGiteeCredentialsDataDir(dataDir);
+setZentaoCredentialsDataDir(dataDir);
 const store = new JsonStore(dataDir);
 const workspaceService = new WorkspaceService(store);
 const skillLibrary = new SkillLibrary({ install: true });
@@ -59,6 +65,8 @@ const settingsService = new SettingsService(store);
 const authService = new AuthService(store);
 const giteeProjects = new GiteeProjectsStore(dataDir);
 const giteeIntegration = new GiteeIntegrationService(dataDir, giteeProjects);
+const zentaoProjects = new ZentaoProjectsStore(dataDir);
+const zentaoIntegration = new ZentaoIntegrationService(dataDir);
 const acceptanceService = new AcceptanceService(dataDir, giteeProjects);
 const acceptanceRunner = new AcceptanceRunner(acceptanceService);
 
@@ -162,7 +170,10 @@ const ticketService = new TicketService(
   botService,
   chatService,
   botRunService,
-  { gitee: new GiteeTicketProvider(giteeProjects) },
+  {
+    gitee: new GiteeTicketProvider(giteeProjects),
+    zentao: new ZentaoTicketProvider(dataDir, zentaoProjects),
+  },
   taskBoard,
 );
 const ticketPulls = new TicketPullScheduleService(dataDir, ticketService);
@@ -187,6 +198,7 @@ registerPipelineRoutes(router, pipelineService);
 registerClarificationRoutes(router, clarificationService);
 registerSettingsRoutes(router, settingsService);
 registerGiteeIntegrationRoutes(router, giteeIntegration);
+registerZentaoIntegrationRoutes(router, zentaoIntegration);
 registerControlRoutes(router, appControl, schedules, dataDir);
 registerDialogRoutes(router);
 registerAuthRoutes(router, authService);

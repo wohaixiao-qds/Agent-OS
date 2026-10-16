@@ -4,8 +4,7 @@ import type { BotRunService } from "./bot-run-service.js";
 import type { BotService } from "./bot-service.js";
 import type { ChatService } from "./chat-service.js";
 import type { WorkspaceService } from "./workspace-service.js";
-import type { TaskBoardService } from "./task-board-service.js";
-import { boardTaskIdForTicket } from "./task-board-service.js";
+import { TaskBoardService, boardTaskIdForTicket } from "./task-board-service.js";
 import { TicketDispatchStore } from "./ticket-dispatches.js";
 import type {
   TicketProvider,
@@ -55,18 +54,25 @@ export class TicketService {
     return provider;
   }
 
-  status(): {
+  async status(): Promise<{
     providers: Array<{
       id: TicketProviderId;
       label: string;
       configured: boolean;
       projectsPath?: string;
     }>;
-  } {
+  }> {
+    const providers = Object.values(this.providers).filter(
+      (p): p is TicketProvider => Boolean(p),
+    );
     return {
-      providers: Object.values(this.providers)
-        .filter((p): p is TicketProvider => Boolean(p))
-        .map((p) => ({ ...p.status(), id: p.id, label: p.label })),
+      providers: await Promise.all(
+        providers.map(async (p) => ({
+          ...(await p.status()),
+          id: p.id,
+          label: p.label,
+        })),
+      ),
     };
   }
 

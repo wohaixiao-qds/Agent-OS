@@ -72,7 +72,7 @@ export interface DownloadedImage {
 export interface TicketProvider {
   readonly id: TicketProviderId;
   readonly label: string;
-  status(): { configured: boolean; projectsPath?: string };
+  status(): Promise<{ configured: boolean; projectsPath?: string }>;
   listProjects(): Promise<TicketProject[]>;
   getProject(projectId: string): Promise<TicketProject | undefined>;
   updateProjectSettings(

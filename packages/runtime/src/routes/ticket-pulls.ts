@@ -4,6 +4,7 @@ import { readJsonBody, sendError, sendJson } from "../http/json.js";
 import type { TicketPullScheduleService } from "../services/ticket-pull-schedule.js";
 
 const AddSchema = z.object({
+  provider: z.enum(["gitee", "zentao"]).default("gitee"),
   projectId: z.string().trim().min(1),
   everyHours: z.number().int().min(1).max(24),
   priority: z.enum(["severe", "major", "none"]),
