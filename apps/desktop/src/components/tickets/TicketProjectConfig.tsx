@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import type { BotConfig } from "@zy-aos/shared";
+import type { BotConfig, Workspace } from "@zy-aos/shared";
 import { api } from "../../lib/api";
+import { pickFolder } from "../../lib/tauri";
+import { folderLastName } from "../../lib/workspace-name";
 import type { TicketEngine, TicketProject } from "./ticket-types";
 
 function castIncludesBot(cast: string[], bot: BotConfig): boolean {
@@ -27,8 +29,10 @@ export function TicketProjectConfig({
   const [engine, setEngine] = useState<TicketEngine>("claude");
   const [cast, setCast] = useState<string[]>([]);
   const [bots, setBots] = useState<BotConfig[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [testBaseUrl, setTestBaseUrl] = useState("");
   const [testStartCommand, setTestStartCommand] = useState("");
+  const [pathNotice, setPathNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +44,14 @@ export function TicketProjectConfig({
       })
       .catch(() => {
         if (!cancelled) setBots([]);
+      });
+    api
+      .listWorkspaces()
+      .then((list) => {
+        if (!cancelled) setWorkspaces(list);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkspaces([]);
       });
     return () => {
       cancelled = true;
@@ -61,6 +73,40 @@ export function TicketProjectConfig({
       .map((bot) => bot.id);
     setCast(selected);
   }, [project, open, bots]);
+
+  const [busy, setBusy] = useState(false);
+
+  /** 选目录：已有工作区则选中，否则自动创建工作区再选中。 */
+  async function handleBrowseDirectory() {
+    const path = await pickFolder();
+    if (!path) return;
+    const existing = workspaces.find(
+      (w) =>
+        w.localPath.replace(/\\/g, "/").toLowerCase() ===
+        path.replace(/\\/g, "/").toLowerCase(),
+    );
+    if (existing) {
+      setLocalPath(existing.localPath);
+      setPathNotice(`已关联现有工作区「${existing.name}」`);
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await api.createWorkspace({
+        name: folderLastName(path),
+        localPath: path,
+      });
+      setWorkspaces((prev) => [...prev, created]);
+      setLocalPath(created.localPath);
+      setPathNotice(`已自动创建工作区「${created.name}」`);
+    } catch (error) {
+      setPathNotice(
+        error instanceof Error ? error.message : "创建工作区失败",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (!open || !project) return null;
 
@@ -102,18 +148,55 @@ export function TicketProjectConfig({
           </button>
         </header>
 
-        <label className="ticket-field">
-          <span>本地工作目录</span>
-          <input
-            className="mono"
-            value={localPath}
-            placeholder="E:\\projects\\repo"
-            onChange={(e) => setLocalPath(e.target.value)}
-          />
+        <div className="ticket-field">
+          <span>本地工作目录（关联工作区）</span>
+          <div className="field-row">
+            <select
+              className="mono"
+              value={
+                workspaces.some((w) => w.localPath === localPath)
+                  ? localPath
+                  : localPath
+                    ? "__unregistered__"
+                    : ""
+              }
+              disabled={workspaces.length === 0}
+              onChange={(e) => {
+                if (e.target.value === "__browse__") return;
+                setLocalPath(e.target.value);
+                setPathNotice(null);
+              }}
+            >
+              {localPath && !workspaces.some((w) => w.localPath === localPath) ? (
+                <option value="__unregistered__">
+                  {localPath}（未登记为工作区）
+                </option>
+              ) : null}
+              {!localPath ? <option value="">未选择</option> : null}
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.localPath}>
+                  {w.name} · {w.localPath}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={busy}
+              onClick={() => void handleBrowseDirectory()}
+            >
+              浏览新目录
+            </button>
+          </div>
           <span className="field-hint muted">
-            每个 Gitee 项目对应不同本地路径；未配置时不能交给 CEO。
+            优先选择已有工作区；浏览新目录会自动登记为工作区。未配置时不能交给 CEO。
           </span>
-        </label>
+          {pathNotice ? (
+            <span className="field-hint" role="status">
+              {pathNotice}
+            </span>
+          ) : null}
+        </div>
 
         <label className="ticket-field">
           <span>默认引擎</span>

@@ -4,11 +4,13 @@ import type { Workspace } from "@zy-aos/shared";
 import { api } from "../lib/api";
 import { pickFolder } from "../lib/tauri";
 import { folderLastName } from "../lib/workspace-name";
+import { useShell } from "../lib/shell-context";
 
 export function WorkspaceFormPage() {
   const { id } = useParams<{ id: string }>();
   const isNew = !id || id === "new";
   const navigate = useNavigate();
+  const { refreshAll } = useShell();
 
   const [name, setName] = useState("");
   const [localPath, setLocalPath] = useState("");
@@ -93,6 +95,24 @@ export function WorkspaceFormPage() {
       }
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!workspaceId || busy) return;
+    const confirmed = window.confirm(
+      "确定删除该工作区？仅解除登记，不会删除本地目录与话题记录；相关工单项目配置不受影响。",
+    );
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      await api.deleteWorkspace(workspaceId);
+      await refreshAll();
+      navigate("/workspace", { replace: true });
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "删除失败");
     } finally {
       setBusy(false);
     }
@@ -194,6 +214,16 @@ export function WorkspaceFormPage() {
         {status ? <p className="form-status">{status}</p> : null}
 
         <div className="form-actions">
+          {!isNew ? (
+            <button
+              type="button"
+              className="btn-ghost danger"
+              disabled={busy}
+              onClick={() => void handleDelete()}
+            >
+              删除工作区
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn-ghost"

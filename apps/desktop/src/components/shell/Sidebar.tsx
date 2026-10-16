@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { Topic } from "@zy-aos/shared";
 import { useShell } from "../../lib/shell-context";
 import { IconChevronDown, IconGrid, IconPlus, IconTrash } from "./icons";
+import { api } from "../../lib/api";
 
 function topicStatus(
   topic: Topic,
@@ -145,6 +146,7 @@ export function Sidebar() {
     createTopic,
     deleteTopic,
     topicPendingIds,
+    refreshAll,
   } = useShell();
   const [filter, setFilter] = useState("");
   const [creating, setCreating] = useState(false);
@@ -155,6 +157,25 @@ export function Sidebar() {
     if (!q) return topics;
     return topics.filter((t) => t.title.toLowerCase().includes(q));
   }, [topics, filter]);
+
+  async function handleDeleteWorkspace() {
+    if (!workspace) return;
+    const confirmed = window.confirm(
+      `确定删除工作区「${workspace.name}」？仅解除登记，不会删除本地目录与话题记录。`,
+    );
+    if (!confirmed) {
+      setMenuOpen(false);
+      return;
+    }
+    try {
+      await api.deleteWorkspace(workspace.id);
+      setMenuOpen(false);
+      await refreshAll();
+    } catch (error) {
+      setMenuOpen(false);
+      alert(error instanceof Error ? error.message : "删除失败");
+    }
+  }
 
   async function handleNewTopic() {
     setCreating(true);
@@ -210,12 +231,21 @@ export function Sidebar() {
                   新建工作区
                 </Link>
                 {workspace ? (
-                  <Link
-                    to={`/workspaces/${workspace.id}`}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    编辑工作区
-                  </Link>
+                  <>
+                    <Link
+                      to={`/workspaces/${workspace.id}`}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      编辑工作区
+                    </Link>
+                    <button
+                      type="button"
+                      className="workspace-dropdown-danger"
+                      onClick={() => void handleDeleteWorkspace()}
+                    >
+                      删除当前工作区
+                    </button>
+                  </>
                 ) : null}
               </div>
             </div>

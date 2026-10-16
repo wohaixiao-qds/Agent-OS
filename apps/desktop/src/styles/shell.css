@@ -288,6 +288,22 @@
   background: var(--accent-soft);
 }
 
+.workspace-dropdown-danger {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: var(--danger);
+  font-size: inherit;
+}
+
+.workspace-dropdown-danger:hover {
+  text-decoration: underline;
+}
+
 .workspace-dropdown-links {
   border-top: 1px solid var(--border);
   margin-top: 4px;
