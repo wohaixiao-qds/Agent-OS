@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Workspace } from "@ml-aos/shared";
 import { api } from "../lib/api";
 import { pickFolder } from "../lib/tauri";
+import { folderLastName } from "../lib/workspace-name";
 
 export function WorkspaceFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,10 @@ export function WorkspaceFormPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(!isNew);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  // Last name auto-filled from a picked folder, so re-picking can refresh it
+  // without clobbering a name the user typed.
+  const autoNameRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isNew) return;
@@ -56,7 +61,16 @@ export function WorkspaceFormPage() {
 
   async function handleBrowse() {
     const path = await pickFolder();
-    if (path) setLocalPath(path);
+    if (!path) return;
+    setLocalPath(path);
+    const folderName = folderLastName(path);
+    if (!folderName) return;
+    if (!name.trim() || name === autoNameRef.current) {
+      setName(folderName);
+      autoNameRef.current = folderName;
+      // Select the auto name so typing replaces it directly.
+      requestAnimationFrame(() => nameInputRef.current?.select());
+    }
   }
 
   async function handleSave(e: FormEvent) {
@@ -129,6 +143,7 @@ export function WorkspaceFormPage() {
         <label className="field">
           <span>工作区名称</span>
           <input
+            ref={nameInputRef}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="例如：backend-api-refactor"
@@ -141,17 +156,25 @@ export function WorkspaceFormPage() {
           <div className="field-row">
             <input
               value={localPath}
-              onChange={(e) => setLocalPath(e.target.value)}
-              placeholder="E:\\projects\\repo"
+              placeholder="点击选择项目文件夹"
               required
-              className="mono"
+              className="mono path-picker"
+              readOnly
+              onClick={handleBrowse}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  void handleBrowse();
+                }
+              }}
+              aria-label="本地项目路径，点击选择项目文件夹"
             />
             <button type="button" className="btn-ghost" onClick={handleBrowse}>
               浏览
             </button>
           </div>
           <span className="field-hint">
-            智能体将在该目录中操作，建议使用绝对路径。
+            点击输入框或「浏览」选择项目文件夹；不支持选择文件，也不可手动输入。
           </span>
         </label>
 
