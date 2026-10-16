@@ -189,7 +189,6 @@ export class ZentaoTicketProvider implements TicketProvider {
     const executions = await client
       .listProjectExecutions(projectIdNumber)
       .catch(() => []);
-    const executionNames = new Map(executions.map((e) => [e.id, e.name]));
 
     const tasks: TicketSummary[] = [];
     for (const execution of executions) {
@@ -210,23 +209,79 @@ export class ZentaoTicketProvider implements TicketProvider {
       }
     }
 
-    const products = await client
+    // Bug 范围（严格按选中项目）：项目 → 执行详情 → 执行关联产品。
+    // 21.6.1 实测：/projects/{id}/products 404、assignedTo 查询参数被忽略、
+    // bug.project 常为 0 —— 执行详情的 products[] 是唯一可靠的关联来源。
+    const todoMode = !options?.includeAllStates;
+    const executionDetails = await Promise.all(
+      executions.map((execution) =>
+        client.getExecution(execution.id).catch(() => null),
+      ),
+    );
+    const linkedProducts = new Map<number, string>();
+    for (const detail of executionDetails) {
+      for (const item of detail?.products ?? []) {
+        if (!linkedProducts.has(item.id)) {
+          linkedProducts.set(item.id, item.name ?? "");
+        }
+      }
+    }
+
+    const globalProducts = await client
       .listProjectProducts(projectIdNumber)
       .catch(() => []);
+    const globalMap = new Map(globalProducts.map((p) => [p.id, p]));
+
+    let bugProducts: Array<{ id: number; name: string; full: boolean }>;
+    if (linkedProducts.size > 0) {
+      // 严格范围：只拉执行关联的产品，并翻完 total（指派给我需客户端过滤）。
+      bugProducts = [...linkedProducts.keys()].map((id) => ({
+        id,
+        name:
+          linkedProducts.get(id) ||
+          globalMap.get(id)?.name ||
+          String(id),
+        full: true,
+      }));
+    } else {
+      // 兜底：执行关联不可用时，全局产品 + bug.project∈{0, 当前项目}。
+      // 待办模式跳过没有未解决 Bug 的产品，把请求量压下来。
+      bugProducts = (
+        todoMode && globalProducts.some((p) => (p.unresolvedBugs ?? 0) > 0)
+          ? globalProducts.filter((p) => (p.unresolvedBugs ?? 0) > 0)
+          : globalProducts
+      ).map((p) => ({ id: p.id, name: p.name, full: false }));
+    }
+
     const bugs: TicketSummary[] = [];
-    for (const product of products) {
-      const rows = await client.listProductBugs(product.id).catch(() => []);
-      for (const bug of rows) {
-        if (!zentaoUserAccount(bug.assignedTo)?.includes(config.account)) {
-          continue;
+    const CONCURRENCY = 4;
+    for (let i = 0; i < bugProducts.length; i += CONCURRENCY) {
+      const batch = bugProducts.slice(i, i + CONCURRENCY);
+      const pages = await Promise.all(
+        batch.map(async (product) => {
+          const rows = await client
+            .listProductBugs(product.id, { full: product.full })
+            .catch(() => []);
+          return { product, rows };
+        }),
+      );
+      for (const { product, rows } of pages) {
+        for (const bug of rows) {
+          if (!zentaoUserAccount(bug.assignedTo)?.includes(config.account)) {
+            continue;
+          }
+          if (linkedProducts.size === 0) {
+            // 兜底路径才按 bug.project 过滤；严格路径的产品已随执行归属项目。
+            const bugProject = bug.project ?? 0;
+            if (bugProject !== 0 && bugProject !== projectIdNumber) {
+              continue;
+            }
+          }
+          if (todoMode && bug.status !== "active") {
+            continue;
+          }
+          bugs.push(bugSummary(bug, project.programId, config.baseUrl, product.name));
         }
-        if (bug.project !== undefined && bug.project !== projectIdNumber) {
-          continue;
-        }
-        if (!options?.includeAllStates && bug.status !== "active") {
-          continue;
-        }
-        bugs.push(bugSummary(bug, project.programId, config.baseUrl, product.name));
       }
     }
 

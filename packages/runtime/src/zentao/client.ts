@@ -40,6 +40,21 @@ export interface ZentaoProduct {
   id: number;
   name: string;
   status?: string;
+  /** 未解决 Bug 数；todo 拉取时可跳过为 0 的产品。 */
+  unresolvedBugs?: number;
+}
+
+export interface ZentaoProductRef {
+  id: number;
+  name?: string;
+}
+
+export interface ZentaoExecutionDetail {
+  id: number;
+  name: string;
+  project?: number;
+  /** 执行关联的产品 —— Bug 的真实归属范围（21.6.1 实测字段）。 */
+  products: ZentaoProductRef[];
 }
 
 export type ZentaoUserRef = string | { account?: string; realname?: string } | null;
@@ -73,6 +88,8 @@ export interface ZentaoBug {
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_PAGES = 20;
+/** 全量翻页上限（407 条 Bug = 5 页；留足余量）。 */
+const FULL_PAGINATION_PAGES = 200;
 
 function asNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -252,10 +269,11 @@ export class ZentaoClient {
     key: string,
     map: (row: Record<string, unknown>) => T | undefined,
     extraParams?: URLSearchParams,
+    maxPages: number = MAX_PAGES,
   ): Promise<T[]> {
     const out: T[] = [];
     const limit = 100;
-    for (let page = 1; page <= MAX_PAGES; page++) {
+    for (let page = 1; page <= maxPages; page++) {
       const params = new URLSearchParams(extraParams);
       params.set("page", String(page));
       params.set("limit", String(limit));
@@ -328,20 +346,10 @@ export class ZentaoClient {
     return this.paged<ZentaoProduct>(
       `/projects/${projectId}/products`,
       "products",
-      (row) => {
-        const id = asNumber(row.id);
-        const name = asString(row.name);
-        if (id === undefined || !name) return undefined;
-        return { id, name, status: asString(row.status) };
-      },
+      (row) => mapProduct(row),
     ).catch((error) => {
       if (error instanceof ZentaoClientError && error.status === 404) {
-        return this.paged<ZentaoProduct>("/products", "products", (row) => {
-          const id = asNumber(row.id);
-          const name = asString(row.name);
-          if (id === undefined || !name) return undefined;
-          return { id, name, status: asString(row.status) };
-        });
+        return this.paged<ZentaoProduct>("/products", "products", mapProduct);
       }
       throw error;
     });
@@ -355,11 +363,52 @@ export class ZentaoClient {
     );
   }
 
-  listProductBugs(productId: number): Promise<ZentaoBug[]> {
+  /** 执行详情：含关联产品（Bug 归属范围的可靠来源）。 */
+  async getExecution(executionId: number): Promise<ZentaoExecutionDetail> {
+    const row = expectObject(
+      await this.request<unknown>(`/executions/${executionId}`),
+      `执行 ${executionId}`,
+    );
+    const id = asNumber(row.id);
+    const name = asString(row.name);
+    if (id === undefined || !name) {
+      throw new ZentaoClientError(`禅道执行 ${executionId} 不存在`, 404);
+    }
+    const rawProducts = Array.isArray(row.products) ? row.products : [];
+    const products: ZentaoProductRef[] = [];
+    for (const item of rawProducts) {
+      const pid = asNumber(
+        item && typeof item === "object"
+          ? (item as Record<string, unknown>).id
+          : item,
+      );
+      if (pid === undefined) continue;
+      products.push({
+        id: pid,
+        name: asString(
+          item && typeof item === "object"
+            ? (item as Record<string, unknown>).name
+            : undefined,
+        ),
+      });
+    }
+    return { id, name, project: asNumber(row.project), products };
+  }
+
+  /**
+   * 产品 Bug 列表。full=true 时翻完 total（"指派给我"没有服务端过滤，
+   * 必须全量拉取后按 assignedTo 过滤，对齐 tianjin-library zentao-mcp）。
+   */
+  listProductBugs(
+    productId: number,
+    options?: { full?: boolean },
+  ): Promise<ZentaoBug[]> {
     return this.paged<ZentaoBug>(
       `/products/${productId}/bugs`,
       "bugs",
       mapBug,
+      undefined,
+      options?.full ? FULL_PAGINATION_PAGES : MAX_PAGES,
     );
   }
 
@@ -416,6 +465,18 @@ export class ZentaoClient {
       body: comment ? { comment } : {},
     });
   }
+}
+
+function mapProduct(row: Record<string, unknown>): ZentaoProduct | undefined {
+  const id = asNumber(row.id);
+  const name = asString(row.name);
+  if (id === undefined || !name) return undefined;
+  return {
+    id,
+    name,
+    status: asString(row.status),
+    unresolvedBugs: asNumber(row.unresolvedBugs),
+  };
 }
 
 function mapTask(row: Record<string, unknown>): ZentaoTask | undefined {

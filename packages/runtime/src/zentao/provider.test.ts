@@ -44,7 +44,16 @@ function fakeClient(): ZentaoClient {
         project: 5,
       },
     ],
-    listProjectProducts: async () => [{ id: 51, name: "主产品" }],
+    listProjectProducts: async () => [
+      { id: 51, name: "主产品", unresolvedBugs: 3 },
+      { id: 99, name: "无关产品", unresolvedBugs: 0 },
+    ],
+    getExecution: async (executionId: number) => ({
+      id: executionId,
+      name: "迭代一",
+      project: 5,
+      products: [{ id: 51, name: "主产品" }],
+    }),
     listProductBugs: async () => [
       {
         id: 1337,
