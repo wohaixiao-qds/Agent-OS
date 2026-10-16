@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, type TicketProviderId, type TicketsStatus } from "../../lib/api";
 import { useShell } from "../../lib/shell-context";
 import { IconActivity, IconSettings, IconTicket } from "../shell/icons";
@@ -71,6 +72,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     selectTopic,
     refreshAll,
   } = useShell();
+  const navigate = useNavigate();
 
   const [provider, setProvider] = useState<TicketProviderId>("gitee");
   const [providerStatus, setProviderStatus] = useState<TicketsStatus["providers"]>([]);
@@ -99,8 +101,17 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
 
   const providerLabel =
     PROVIDERS.find((p) => p.id === provider)?.label ?? provider;
-  const configured =
-    providerStatus.find((p) => p.id === provider)?.configured ?? true;
+  // 只展示已配置的来源；没配置的不出现在收件箱。
+  const configuredProviders = useMemo(
+    () =>
+      PROVIDERS.filter(
+        (item) =>
+          providerStatus.find((s) => s.id === item.id)?.configured ?? false,
+      ),
+    [providerStatus],
+  );
+
+
 
   const project = projects.find((p) => p.id === projectId) ?? null;
   const groups = useMemo(() => groupTicketsBySprint(tickets), [tickets]);
@@ -110,6 +121,19 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   const loadProjects = useCallback(async (target: TicketProviderId) => {
     const status = await api.ticketsStatus();
     setProviderStatus(status.providers);
+    // 目标来源未配置时自动落到第一个已配置来源（事件处修正，不进 effect）。
+    const configuredIds = status.providers
+      .filter((item) => item.configured)
+      .map((item) => item.id);
+    const resolved = configuredIds.includes(target)
+      ? target
+      : ((configuredIds[0] as TicketProviderId | undefined) ?? target);
+    if (resolved !== target) {
+      setProvider(resolved);
+      setSelectedKey(null);
+      setNotice(null);
+      target = resolved;
+    }
     const list = (await api.listTicketProjects(target)).map(toProject);
     setProjects(list);
     setProjectId((prev) =>
@@ -321,38 +345,37 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         </div>
       </header>
 
-      <div
-        className="ticket-provider-tabs"
-        role="tablist"
-        aria-label="工单来源"
-      >
-        {PROVIDERS.map((item) => {
-          const active = item.id === provider;
-          const ok =
-            providerStatus.find((p) => p.id === item.id)?.configured ?? true;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              className={
-                active ? "ticket-provider-tab is-active" : "ticket-provider-tab"
-              }
-              onClick={() => {
-                if (!active) {
-                  setProvider(item.id);
-                  setSelectedKey(null);
-                  setNotice(null);
+      {configuredProviders.length > 1 ? (
+        <div
+          className="ticket-provider-tabs"
+          role="tablist"
+          aria-label="工单来源"
+        >
+          {configuredProviders.map((item) => {
+            const active = item.id === provider;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={
+                  active ? "ticket-provider-tab is-active" : "ticket-provider-tab"
                 }
-              }}
-            >
-              {item.label}
-              {!ok ? <span className="ticket-provider-dot" aria-label="未配置" /> : null}
-            </button>
-          );
-        })}
-      </div>
+                onClick={() => {
+                  if (!active) {
+                    setProvider(item.id);
+                    setSelectedKey(null);
+                    setNotice(null);
+                  }
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="ticket-project-bar">
         <label className="ticket-project-select">
@@ -411,14 +434,20 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
           {notice}
         </p>
       ) : null}
-      {!configured && !notice ? (
-        <p className="ticket-notice" role="status">
-          {provider === "gitee"
-            ? "未检测到 Gitee 环境变量。请在「设置 → 集成工单系统」或项目根 `.env` 配置凭证。"
-            : "禅道未配置。请在「设置 → 集成工单系统」填写服务地址、账号与密码。"}
-        </p>
+      {providerStatus.length > 0 && configuredProviders.length === 0 ? (
+        <div className="ticket-notice" role="status">
+          <p>还没有配置任何工单来源。</p>
+          <button
+            type="button"
+            className="ticket-path-missing"
+            onClick={() => navigate("/settings")}
+          >
+            去设置 → 集成工单
+          </button>
+        </div>
       ) : null}
 
+      {configuredProviders.length === 0 ? null : (
       <div className="ticket-inbox-scroll">
         {loading || todosLoading ? (
           <div className="ticket-loading" role="status" aria-live="polite">
@@ -517,6 +546,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
           ))
         )}
       </div>
+      )}
 
       <TicketDetailDrawer
         open={detailOpen}

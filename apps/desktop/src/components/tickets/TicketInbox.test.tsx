@@ -2,6 +2,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { TicketInbox } from "./TicketInbox";
 import { api } from "../../lib/api";
 
@@ -90,7 +91,11 @@ describe("TicketInbox (API)", () => {
   it("loads projects and todos from API", async () => {
     const root = createRoot(container);
     await act(async () => {
-      root.render(<TicketInbox onCollapse={vi.fn()} />);
+      root.render(
+        <MemoryRouter>
+          <TicketInbox onCollapse={vi.fn()} />
+        </MemoryRouter>,
+      );
     });
     await act(async () => {
       await Promise.resolve();
@@ -106,7 +111,11 @@ describe("TicketInbox (API)", () => {
   it("requests issue states when opening change-state picker", async () => {
     const root = createRoot(container);
     await act(async () => {
-      root.render(<TicketInbox onCollapse={vi.fn()} />);
+      root.render(
+        <MemoryRouter>
+          <TicketInbox onCollapse={vi.fn()} />
+        </MemoryRouter>,
+      );
     });
     await act(async () => {
       await Promise.resolve();
