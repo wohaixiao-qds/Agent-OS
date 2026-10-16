@@ -12,7 +12,7 @@ import type { AppState } from "../app-state.js";
 
 describe("AppControl acceptance gate", () => {
   it("persists submit_acceptance and posts an acceptance card", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-acc-ctrl-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-acc-ctrl-"));
     const store = new JsonStore(dir);
     const state: AppState = {
       settings: {

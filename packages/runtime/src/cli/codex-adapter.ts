@@ -81,7 +81,7 @@ function toolEvents(item: Record<string, unknown>): CliEvent[] {
   return [];
 }
 
-/** Map one Codex JSONL line to ml-aos CliEvents. */
+/** Map one Codex JSONL line to zy-aos CliEvents. */
 export function parseCodexStdoutLine(line: string): CliEvent[] {
   const trimmed = line.trim();
   if (!trimmed) return [];
@@ -167,7 +167,7 @@ function buildArgs(input: CliRunInput, promptInput: "argument" | "stdin"): strin
 export class CodexCliAdapter implements CliAdapter {
   constructor(
     private readonly spawnFn: SpawnFn = spawn,
-    private readonly command: string = process.env.ML_AOS_CODEX_PATH?.trim() || "codex",
+    private readonly command: string = process.env.ZY_AOS_CODEX_PATH?.trim() || "codex",
     private readonly platform: NodeJS.Platform = process.platform,
   ) {}
 

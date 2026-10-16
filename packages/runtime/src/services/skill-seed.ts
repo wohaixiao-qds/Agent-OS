@@ -37,7 +37,7 @@ async function copySkillDir(srcDir: string, destDir: string): Promise<void> {
   }
 }
 
-/** Bundled default skills shipped with @ml-aos/runtime (agent-os aligned). */
+/** Bundled default skills shipped with @zy-aos/runtime (agent-os aligned). */
 export function bundledSkillsRoot(): string {
   // src/services → ../../skills ; dist/services → ../../skills
   return join(fileURLToPath(new URL("../..", import.meta.url)), "skills");

@@ -4,7 +4,7 @@ import type { RouteHandler } from "../http/router.js";
 import { readJsonBody, sendError, sendJson } from "../http/json.js";
 import type { AppControl, ControlDecision } from "../services/app-control.js";
 import type { ScheduleService } from "../services/schedule-service.js";
-import type { ScheduleManageRequest } from "@ml-aos/shared";
+import type { ScheduleManageRequest } from "@zy-aos/shared";
 
 export function registerControlRoutes(
   router: {

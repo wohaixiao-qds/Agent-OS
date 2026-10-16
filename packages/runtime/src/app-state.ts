@@ -6,7 +6,7 @@ import type {
   ChatMessage,
   PipelineTask,
   StoredUser,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 
 export interface AppState {
   settings: AppSettings;

@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { ChatMessage, DispatchTaskRequest } from "@ml-aos/shared";
-import { findDispatchTaskRequest } from "@ml-aos/shared";
+import type { ChatMessage, DispatchTaskRequest } from "@zy-aos/shared";
+import { findDispatchTaskRequest } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { BotRunService, BotRunSettled } from "./bot-run-service.js";
 import type { BotService } from "./bot-service.js";

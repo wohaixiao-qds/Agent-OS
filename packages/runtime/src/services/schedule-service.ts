@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { ScheduleManageRequest, ScheduleRule } from "@ml-aos/shared";
+import type { ScheduleManageRequest, ScheduleRule } from "@zy-aos/shared";
 
 export interface ScheduledTask {
   id: string;

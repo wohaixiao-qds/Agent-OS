@@ -7,7 +7,7 @@ Tauri starts the Node Desktop Runtime when `http://127.0.0.1:17890/health` is no
 1. **Packaged install** (preferred for Releases):  
    `{resource_dir}/node/node(.exe)` + `{resource_dir}/runtime/index.js`  
    Prepared by `pnpm prepare:bundle` / `pnpm build:desktop`.  
-   Sets `ML_AOS_DATA_DIR` to `{app_data}/data`.
+   Sets `ZY_AOS_DATA_DIR` to `{app_data}/data`.
 
 2. **Dev with dist:**  
    `node packages/runtime/dist/index.js` when dist exists.

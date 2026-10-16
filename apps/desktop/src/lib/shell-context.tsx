@@ -14,7 +14,7 @@ import type {
   PipelineTask,
   Topic,
   Workspace,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 import { api } from "./api";
 import { connectWs } from "./ws";
 
@@ -79,7 +79,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
     try {
-      return localStorage.getItem("ml-aos.rightPanelCollapsed") === "1";
+      return localStorage.getItem("zy-aos.rightPanelCollapsed") === "1";
     } catch {
       return false;
     }
@@ -89,7 +89,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
     setRightPanelCollapsed((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem("ml-aos.rightPanelCollapsed", next ? "1" : "0");
+        localStorage.setItem("zy-aos.rightPanelCollapsed", next ? "1" : "0");
       } catch {
         /* ignore */
       }

@@ -2,12 +2,12 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { AcceptanceResult, AcceptanceSubmission } from "@ml-aos/shared";
+import type { AcceptanceResult, AcceptanceSubmission } from "@zy-aos/shared";
 import type { AcceptanceService } from "./acceptance-service.js";
 
 const SUITE_CANDIDATES = [
-  join(".ml-aos", "acceptance", "playwright.config.ts"),
-  join(".ml-aos", "acceptance", "playwright.config.js"),
+  join(".zy-aos", "acceptance", "playwright.config.ts"),
+  join(".zy-aos", "acceptance", "playwright.config.js"),
   join("acceptance", "playwright.config.ts"),
   join("acceptance", "playwright.config.js"),
 ];
@@ -108,20 +108,20 @@ export class AcceptanceRunner {
     const suitePath = await findAcceptanceSuite(input.workspacePath);
     if (!suitePath) {
       throw new Error(
-        "工作区未找到 Playwright 验收套件。请在 .ml-aos/acceptance/playwright.config.ts 或 acceptance/playwright.config.ts 放置配置，或改用 agent-browser + submit_acceptance。",
+        "工作区未找到 Playwright 验收套件。请在 .zy-aos/acceptance/playwright.config.ts 或 acceptance/playwright.config.ts 放置配置，或改用 agent-browser + submit_acceptance。",
       );
     }
 
     const reportPath = join(
       resolve(input.workspacePath),
-      ".ml-aos",
+      ".zy-aos",
       "acceptance",
       "playwright-report.json",
     );
     const { command, prefixArgs } = playwrightCli();
     if (!existsSync(prefixArgs[0]!)) {
       throw new Error(
-        "未找到 @playwright/test。请在 ml-aos 根目录 pnpm install，并按需 pnpm exec playwright install chromium。",
+        "未找到 @playwright/test。请在 zy-aos 根目录 pnpm install，并按需 pnpm exec playwright install chromium。",
       );
     }
 

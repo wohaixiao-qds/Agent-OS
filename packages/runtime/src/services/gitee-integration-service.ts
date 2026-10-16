@@ -27,7 +27,7 @@ export class GiteeIntegrationService {
     const view = viewGiteeCredentials(this.dataDir);
     const allowlist = await this.projects.loadLocalAllowlist();
     const viaEnv = Boolean(
-      process.env.ML_AOS_GITEE_PROJECTS_CONFIG?.trim() ||
+      process.env.ZY_AOS_GITEE_PROJECTS_CONFIG?.trim() ||
         process.env.GITEE_PROJECTS_CONFIG?.trim(),
     );
     return {

@@ -49,7 +49,7 @@ describe("LandingPage Component", () => {
       );
     });
 
-    expect(container.textContent).toContain("MLAOS");
+    expect(container.textContent).toContain("ZYAOS");
     expect(container.textContent).toContain("智能体操作系统");
     expect(container.querySelector(".landing-enter-btn")).toBeNull();
     expect(container.querySelector(".theme-btn")).toBeNull();

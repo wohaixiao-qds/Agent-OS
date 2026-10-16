@@ -3,7 +3,7 @@ import {
   findDispatchTaskRequest,
   type DispatchTaskRequest,
   type ToolCallRecord,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 
 /** Codex / Claude native implementation tools (not agent_os MCP). */
 const IMPLEMENTATION_TOOL_NAMES = new Set([
@@ -103,7 +103,7 @@ export interface TeamLeaderDispatchOutcome {
 
 /**
  * Aligns with agent-os ensureTeamLeaderDispatch.
- * Retry is async in ml-aos: first call returns correctionPrompt; after correction
+ * Retry is async in zy-aos: first call returns correctionPrompt; after correction
  * settle with still-no-tool, caller passes alreadyCorrected=true to get fallback.
  */
 export function resolveTeamLeaderDispatch(options: {

@@ -4,7 +4,7 @@ import type {
   AcceptanceResult,
   ChatMessage,
   ProductSpecRequest,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 import {
   calledScheduleManage,
   clarificationToMarkdown,
@@ -20,7 +20,7 @@ import {
   looksLikeReviewFailure,
   looksLikeTestFailure,
   normalizeToolName,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { BotRunService, BotRunSettled } from "./bot-run-service.js";
 import type { BotService } from "./bot-service.js";

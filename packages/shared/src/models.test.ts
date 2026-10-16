@@ -11,7 +11,7 @@ describe("AppSettingsSchema", () => {
     const parsed = AppSettingsSchema.parse({
       theme: "dark",
       defaultEngine: "mock",
-      dataDir: "C:/tmp/ml-aos",
+      dataDir: "C:/tmp/zy-aos",
       notifications: true,
     });
     expect(parsed.theme).toBe("dark");

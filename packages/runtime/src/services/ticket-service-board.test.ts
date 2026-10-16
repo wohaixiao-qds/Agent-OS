@@ -114,7 +114,7 @@ describe("TicketService board + state APIs", () => {
     downloadIssueImages.mockReset();
     downloadIssueImages.mockResolvedValue([]);
 
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-ticket-board-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-ticket-board-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
 

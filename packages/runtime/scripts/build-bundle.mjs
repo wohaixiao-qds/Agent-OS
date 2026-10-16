@@ -26,7 +26,7 @@ await build({
   logLevel: "info",
   // Workspace package resolves via package exports → TypeScript sources.
   alias: {
-    "@ml-aos/shared": join(root, "..", "shared", "src", "index.ts"),
+    "@zy-aos/shared": join(root, "..", "shared", "src", "index.ts"),
   },
   // Keep optional/heavy tooling external; installer users run agent-browser CLI separately.
   external: ["@playwright/test", "playwright", "playwright-core"],
@@ -44,7 +44,7 @@ await build({
 
 await writeFile(
   join(outdir, "package.json"),
-  `${JSON.stringify({ type: "module", private: true, name: "@ml-aos/runtime-bundle" }, null, 2)}\n`,
+  `${JSON.stringify({ type: "module", private: true, name: "@zy-aos/runtime-bundle" }, null, 2)}\n`,
 );
 
 console.log(`runtime bundle -> ${join(outdir, "index.js")}`);

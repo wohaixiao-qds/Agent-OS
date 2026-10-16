@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { findAcceptanceSuite } from "./acceptance-runner.js";
 
 describe("findAcceptanceSuite", () => {
-  it("finds .ml-aos/acceptance playwright config", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-suite-"));
+  it("finds .zy-aos/acceptance playwright config", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-suite-"));
     try {
-      const cfgDir = join(dir, ".ml-aos", "acceptance");
+      const cfgDir = join(dir, ".zy-aos", "acceptance");
       await mkdir(cfgDir, { recursive: true });
       await writeFile(join(cfgDir, "playwright.config.ts"), "export default {}");
       const found = await findAcceptanceSuite(dir);

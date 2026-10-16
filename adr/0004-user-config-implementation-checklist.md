@@ -12,7 +12,7 @@ Accepted（访谈结束，待实现）
 
 ### Runtime
 
-- [ ] `resolveGiteeCredentials()`：`process.env`（含 `ML_AOS_*` 与 `MI_CLAW_*` / 旧别名）→ 否则 `dataDir` 存档
+- [ ] `resolveGiteeCredentials()`：`process.env`（含 `ZY_AOS_*` 与 `MI_CLAW_*` / 旧别名）→ 否则 `dataDir` 存档
 - [ ] Gitee client / routes 全部改走 resolver；缺凭证时错误文案指向设置页
 - [ ] `dataDir` 存档文件（如 `gitee-credentials.json`）与项目列表默认路径迁到 `dataDir`
 - [ ] 保留 `GITEE_PROJECTS_CONFIG` 进阶覆盖
@@ -26,7 +26,7 @@ Accepted（访谈结束，待实现）
 
 ### Docs / repo hygiene
 
-- [ ] 更新 `.env.example` 为 `ML_AOS_*`，注释旧名兼容与优先级
+- [ ] 更新 `.env.example` 为 `ZY_AOS_*`，注释旧名兼容与优先级
 - [ ] README：双通道、安装版只走设置页、功能降级
 - [ ] 确认 git 无真实密钥 / 真实 `gitee-projects.json`；example 可提交
 

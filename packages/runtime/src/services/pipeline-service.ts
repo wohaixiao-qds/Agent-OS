@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { PipelineStage, PipelineTask, Topic } from "@ml-aos/shared";
+import type { PipelineStage, PipelineTask, Topic } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { ChatEvent } from "./chat-service.js";
 import { resolveStageBotIds } from "./pipeline-bots.js";

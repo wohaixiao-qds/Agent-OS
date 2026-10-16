@@ -7,7 +7,7 @@ import { SkillLibrary, skillNotReadyMessage } from "./skill-install.js";
 
 describe("SkillLibrary", () => {
   it("binds a skill that is already in the user library", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-skill-bind-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-skill-bind-"));
     const dir = join(home, ".claude", "skills", "grill-me");
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), "# installed\n", "utf-8");
@@ -30,7 +30,7 @@ describe("SkillLibrary", () => {
   });
 
   it("installs owner/repo@skill through the installer", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-skill-add-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-skill-add-"));
     const library = new SkillLibrary({
       install: true,
       home,
@@ -50,7 +50,7 @@ describe("SkillLibrary", () => {
   });
 
   it("installs a bundled pipeline skill into the user library", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-skill-bundle-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-skill-bundle-"));
     const library = new SkillLibrary({
       install: true,
       home,
@@ -71,7 +71,7 @@ describe("SkillLibrary", () => {
   });
 
   it("leaves unknown skills failed and does not invent a file", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-skill-miss-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-skill-miss-"));
     const library = new SkillLibrary({ install: true, home });
     const [binding] = await library.ensure(["zz-not-a-real-skill"]);
     expect(binding.status).toBe("failed");
@@ -82,7 +82,7 @@ describe("SkillLibrary", () => {
   });
 
   it("does not install when install is disabled", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-skill-off-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-skill-off-"));
     const library = new SkillLibrary({ install: false, home });
     const [binding] = await library.ensure(["product-spec"]);
     expect(binding.status).toBe("failed");

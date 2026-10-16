@@ -34,7 +34,7 @@ export type DownloadedImage = {
   error?: string;
 };
 
-/** Download issue images into `{localPath}/.ml-aos/tickets/{ident}/`. */
+/** Download issue images into `{localPath}/.zy-aos/tickets/{ident}/`. */
 export async function downloadIssueImages(options: {
   config: GiteeEnvConfig;
   localPath: string;
@@ -42,7 +42,7 @@ export async function downloadIssueImages(options: {
   urls: string[];
 }): Promise<DownloadedImage[]> {
   if (options.urls.length === 0) return [];
-  const dir = join(options.localPath, ".ml-aos", "tickets", options.ident);
+  const dir = join(options.localPath, ".zy-aos", "tickets", options.ident);
   await mkdir(dir, { recursive: true });
 
   const results: DownloadedImage[] = [];
@@ -53,7 +53,7 @@ export async function downloadIssueImages(options: {
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${options.config.token}`,
-          "User-Agent": "mcp-gitee-ent ml-aos Go/windows/amd64/node",
+          "User-Agent": "mcp-gitee-ent zy-aos Go/windows/amd64/node",
         },
       });
       if (!response.ok) {

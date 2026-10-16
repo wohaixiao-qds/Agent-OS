@@ -91,7 +91,7 @@ Windows 安装程序（NSIS）。
 安装包通过 GitHub Releases 发布：
 
 1. 打开 [Releases](https://github.com/wohaixiao-qds/Agent-OS/releases)
-2. 下载最新的 `MLAOS_x.y.z_x64-setup.exe`（NSIS；不要下 Source code zip）
+2. 下载最新的 `ZYAOS_x.y.z_x64-setup.exe`（NSIS；不要下 Source code zip）
 3. 安装后启动应用；内置便携 Node + runtime
 4. **设置 → 集成工单系统** 填写自己的凭证（开发时也可用根目录 `.env`）
 5. 安装并登录 Claude Code 或 Codex，再在智能体页保存 Skills
@@ -112,7 +112,7 @@ pnpm build:desktop
 双通道（**环境变量优先**于设置页存档）：
 
 1. **设置 → 集成工单系统**（推荐桌面用户；写入 `dataDir/gitee-credentials.json`，UI 遮罩 token）
-2. **本机** `.env` **/ 环境变量**（适合克隆源码）：`ML_AOS_GITEE_TOKEN`、`ML_AOS_GITEE_ENTERPRISE_ID`、`ML_AOS_GITEE_USER_ID`（旧名 `MI_CLAW_`* / `GITEE_USER_ID` 仍可读）
+2. **本机** `.env` **/ 环境变量**（适合克隆源码）：`ZY_AOS_GITEE_TOKEN`、`ZY_AOS_GITEE_ENTERPRISE_ID`、`ZY_AOS_GITEE_USER_ID`（旧名 `MI_CLAW_`* / `GITEE_USER_ID` 仍可读）
 
 可用设置页「测试连接」验证。
 
@@ -147,7 +147,7 @@ Windows 上 `tauri build` / `tauri dev` 需要 MSVC 链接器（`link.exe`）。
 
 Runtime 将 JSON 落在数据目录：
 
-- `pnpm dev:runtime` 默认：`./data`（cwd = `packages/runtime`，可用 `ML_AOS_DATA_DIR` 覆盖）
+- `pnpm dev:runtime` 默认：`./data`（cwd = `packages/runtime`，可用 `ZY_AOS_DATA_DIR` 覆盖）
 - 应用设置中的 `dataDir` 见设置页
 - 安装包默认：系统应用数据目录（Windows 一般为 `%APPDATA%\<应用标识>\data`）
 

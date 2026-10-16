@@ -141,10 +141,10 @@ describe("promptInputForPlatform", () => {
 });
 
 describe("resolveClaudeCommand", () => {
-  it("uses ML_AOS_CLAUDE_PATH when set", () => {
+  it("uses ZY_AOS_CLAUDE_PATH when set", () => {
     expect(
       resolveClaudeCommand(
-        { ML_AOS_CLAUDE_PATH: "D:\\tools\\claude.exe" },
+        { ZY_AOS_CLAUDE_PATH: "D:\\tools\\claude.exe" },
         "win32",
         "C:\\node\\node.exe",
       ),
@@ -239,7 +239,7 @@ describe("ClaudeCliAdapter", () => {
     await expect(async () => {
       for await (const _ of adapter.run({
         prompt: "x",
-        cwd: "E:/tmp/definitely-missing-ml-aos-cwd",
+        cwd: "E:/tmp/definitely-missing-zy-aos-cwd",
       })) {
         // drain
       }

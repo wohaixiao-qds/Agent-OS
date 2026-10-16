@@ -1,4 +1,4 @@
-import type { BotConfig, EngineKind } from "@ml-aos/shared";
+import type { BotConfig, EngineKind } from "@zy-aos/shared";
 
 export type DefaultBotSeed = Omit<BotConfig, "id" | "skills"> & {
   skills: string[];
@@ -6,7 +6,7 @@ export type DefaultBotSeed = Omit<BotConfig, "id" | "skills"> & {
 
 /**
  * Default team aligned with agent-os `config/bots.json`
- * (ceo-assistant / product / developer / tester + reviewer for ML AOS pipeline).
+ * (ceo-assistant / product / developer / tester + reviewer for ZY AOS pipeline).
  * Pipeline stages match role exactly: developer | tester | reviewer.
  */
 export const DEFAULT_TEAM_BOTS: DefaultBotSeed[] = [
@@ -66,7 +66,7 @@ export const DEFAULT_TEAM_BOTS: DefaultBotSeed[] = [
       "",
       "执行要求：",
       "- 根据规格 / Tickets 与开发结论列出验收点。",
-      "- 用真实浏览器验证；截图放到工作区 .ml-aos/acceptance/。",
+      "- 用真实浏览器验证；截图放到工作区 .zy-aos/acceptance/。",
       "- 结束后必须调用 submit_acceptance（verdict/summary/checks/evidence）；不要只在正文写通过/失败。",
       "- 若工作区有 Playwright 配置，可调用 run_acceptance_suite。",
       "- 无 UI 的纯库可用 verdict=skip 并写 skipReason。",

@@ -23,7 +23,7 @@ export function LandingPage() {
         <div className="landing-nav-left">
           <div className="brand">
             <img className="brand-logo" src="/logo.png" alt="" />
-            <span className="brand-name">MLAOS</span>
+            <span className="brand-name">ZYAOS</span>
             <span className="brand-divider" aria-hidden />
             <span className="brand-slogan">智能体操作系统</span>
           </div>

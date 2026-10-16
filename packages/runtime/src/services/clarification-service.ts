@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChatMessage } from "@ml-aos/shared";
+import type { ChatMessage } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { ChatEvent } from "./chat-service.js";
 import type { PipelineRunner } from "./pipeline-runner.js";

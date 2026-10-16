@@ -107,7 +107,7 @@ fn spawn_runtime(ctx: &SpawnContext) -> Result<Child, String> {
     .stderr(Stdio::null());
 
   if let Some(dir) = data_dir {
-    cmd.env("ML_AOS_DATA_DIR", dir);
+    cmd.env("ZY_AOS_DATA_DIR", dir);
   }
 
   #[cfg(windows)]
@@ -201,7 +201,7 @@ fn find_resource_dir(explicit: Option<&Path>) -> Option<PathBuf> {
 /// Prefer production dist; fall back to tsx for local/dev (no dist yet).
 fn resolve_dev() -> Result<(PathBuf, Vec<String>, PathBuf, &'static str, Option<PathBuf>), String> {
   let repo = find_repo_root().ok_or_else(|| {
-    "could not locate ml-aos repo root (looking for packages/runtime)".to_string()
+    "could not locate zy-aos repo root (looking for packages/runtime)".to_string()
   })?;
   let runtime_dir = repo.join("packages").join("runtime");
   if !runtime_dir.is_dir() {

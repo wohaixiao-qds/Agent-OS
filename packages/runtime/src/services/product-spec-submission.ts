@@ -2,7 +2,7 @@ import {
   findProductSpecRequest,
   ProductSpecRequestSchema,
   type ProductSpecRequest,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 
 export type ToolCallRecord = { name: string; input?: unknown };
 

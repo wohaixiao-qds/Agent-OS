@@ -1,4 +1,4 @@
-import type { EngineKind } from "@ml-aos/shared";
+import type { EngineKind } from "@zy-aos/shared";
 import type { RouteHandler } from "../http/router.js";
 import { readJsonBody, sendError, sendJson } from "../http/json.js";
 import type { BotService } from "../services/bot-service.js";

@@ -32,7 +32,7 @@ function port(overrides?: Partial<TicketPullPort>): TicketPullPort & {
 
 describe("TicketPullScheduleService", () => {
   it("adds a draft task and refuses a second one for the same project", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-pull-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
     const service = new TicketPullScheduleService(dir, port());
     const task = await service.add({
       projectId: "proj",
@@ -47,7 +47,7 @@ describe("TicketPullScheduleService", () => {
   });
 
   it("manual run hands matching tickets to CEO without starting the schedule", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-pull-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
     const tickets = port();
     const service = new TicketPullScheduleService(dir, tickets);
     const task = await service.add({
@@ -63,7 +63,7 @@ describe("TicketPullScheduleService", () => {
   });
 
   it("none threshold also hands unprioritized tickets and skips 次要", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-pull-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
     const tickets = port();
     const service = new TicketPullScheduleService(dir, tickets);
     const task = await service.add({
@@ -76,7 +76,7 @@ describe("TicketPullScheduleService", () => {
   });
 
   it("starts later, and tick dispatches only when due", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-pull-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
     const tickets = port();
     const service = new TicketPullScheduleService(dir, tickets);
     const created = await service.add({
@@ -100,7 +100,7 @@ describe("TicketPullScheduleService", () => {
   });
 
   it("pause stops later ticks until resume", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-pull-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
     const tickets = port();
     const service = new TicketPullScheduleService(dir, tickets);
     const created = await service.add({
@@ -121,7 +121,7 @@ describe("TicketPullScheduleService", () => {
   });
 
   it("records a missing work directory without dispatching", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-pull-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
     const tickets = port({
       listProjects: async () => [{ id: "proj", localPath: "  ", cast: ["developer"] }],
     });

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChatMessage, EngineKind } from "@ml-aos/shared";
+import type { ChatMessage, EngineKind } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { WorkspaceService } from "./workspace-service.js";
 import type { BotService } from "./bot-service.js";
@@ -12,7 +12,7 @@ import {
   refreshSkillBindings,
   skillNotReadyMessage,
 } from "./skill-install.js";
-import { normalizeToolName } from "@ml-aos/shared";
+import { normalizeToolName } from "@zy-aos/shared";
 
 /** Ignore a later full-message replay so the bubble is not pasted twice. */
 export function mergeStreamText(current: string, delta: string): string {
@@ -364,8 +364,8 @@ export class BotRunService {
         sessionId,
         signal: controller.signal,
         env: {
-          ML_AOS_API_BASE: process.env.ML_AOS_API_BASE ?? "http://127.0.0.1:17890",
-          ML_AOS_TOPIC_ID: req.topicId,
+          ZY_AOS_API_BASE: process.env.ZY_AOS_API_BASE ?? "http://127.0.0.1:17890",
+          ZY_AOS_TOPIC_ID: req.topicId,
         },
       })) {
         if (this.discarded.has(req.topicId) || controller.signal.aborted) break;

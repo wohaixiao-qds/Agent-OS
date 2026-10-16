@@ -8,7 +8,7 @@ import type { AppState } from "../app-state.js";
 describe("JsonStore", () => {
   let dir: string;
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-"));
   });
 
   it("round-trips empty state", async () => {

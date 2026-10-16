@@ -10,7 +10,7 @@ import type { BotRunRequest, BotRunService } from "./bot-run-service.js";
 import type { AppState } from "../app-state.js";
 
 async function setup() {
-  const dir = await mkdtemp(join(tmpdir(), "ml-aos-control-"));
+  const dir = await mkdtemp(join(tmpdir(), "zy-aos-control-"));
   const store = new JsonStore(dir);
   const state: AppState = {
     settings: {

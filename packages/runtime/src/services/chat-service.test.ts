@@ -8,7 +8,7 @@ import { WorkspaceService } from "./workspace-service.js";
 import { ChatService, deriveTopicTitle } from "./chat-service.js";
 import { MockCliAdapter } from "../cli/mock-adapter.js";
 import type { AppState } from "../app-state.js";
-import type { ChatMessage } from "@ml-aos/shared";
+import type { ChatMessage } from "@zy-aos/shared";
 
 async function emptyState(dataDir: string): Promise<AppState> {
   return {
@@ -48,7 +48,7 @@ describe("ChatService", () => {
   let botId: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-chat-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-chat-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
 

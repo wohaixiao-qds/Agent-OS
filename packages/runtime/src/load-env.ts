@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-/** Walk up until pnpm-workspace.yaml (ml-aos repo root). */
+/** Walk up until pnpm-workspace.yaml (zy-aos repo root). */
 export function findWorkspaceRoot(cwd = process.cwd()): string {
   let dir = resolve(cwd);
   for (;;) {

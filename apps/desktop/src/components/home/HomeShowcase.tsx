@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import type { BotConfig, Workspace } from "@ml-aos/shared";
+import type { BotConfig, Workspace } from "@zy-aos/shared";
 import { botPortrait } from "../../lib/bot-style";
 
 interface HomeShowcaseProps {
@@ -77,7 +77,7 @@ export function HomeShowcase({
         <div className="showcase-copy">
           <p className="showcase-kicker">AI 数字化员工团队协作</p>
           <h1 id="showcase-brand" className="showcase-brand">
-            MLAOS
+            ZYAOS
           </h1>
           <p className="showcase-lead">
             自动化AI员工推进工作。工单接入指定AI员工，CEO调度产品、开发、测试与审查推进任务——看清进度，随时停下或继续。

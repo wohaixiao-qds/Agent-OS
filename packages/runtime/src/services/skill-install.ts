@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { homedir } from "node:os";
-import type { SkillBinding } from "@ml-aos/shared";
+import type { SkillBinding } from "@zy-aos/shared";
 import { parseSkillToken, UPSTREAM_SKILLS } from "./skill-catalog.js";
 import { resolveUserSkillPath } from "./skill-paths.js";
 import { installBundledSkill } from "./skill-seed.js";

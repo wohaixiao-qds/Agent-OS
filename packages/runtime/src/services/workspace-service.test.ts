@@ -27,7 +27,7 @@ describe("WorkspaceService", () => {
   let store: JsonStore;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-ws-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-ws-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
   });

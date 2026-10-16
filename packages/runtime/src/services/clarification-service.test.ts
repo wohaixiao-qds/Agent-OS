@@ -62,7 +62,7 @@ describe("ClarificationService", () => {
   let botId: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-clarify-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-clarify-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
 

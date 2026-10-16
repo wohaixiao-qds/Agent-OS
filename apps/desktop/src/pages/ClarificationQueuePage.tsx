@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ChatMessage } from "@ml-aos/shared";
+import type { ChatMessage } from "@zy-aos/shared";
 import { api } from "../lib/api";
 import { useShell } from "../lib/shell-context";
 import { IconAlert } from "../components/shell/icons";

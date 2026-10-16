@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { BotConfig } from "@ml-aos/shared";
+import type { BotConfig } from "@zy-aos/shared";
 import { api } from "../../lib/api";
 import type { TicketEngine, TicketProject } from "./ticket-types";
 

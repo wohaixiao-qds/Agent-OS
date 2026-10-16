@@ -41,7 +41,7 @@
 
 ## 环境变量别名（Env Alias）
 
-对外推荐 `ML_AOS_GITEE_*`；运行时仍接受历史名 `MI_CLAW_GITEE_*`、`GITEE_USER_ID` 等，避免打断已有本机 `.env`。文档与 `.env.example` 只展示新名，并注明旧名兼容。
+对外推荐 `ZY_AOS_GITEE_*`；运行时仍接受历史名 `MI_CLAW_GITEE_*`、`GITEE_USER_ID` 等，避免打断已有本机 `.env`。文档与 `.env.example` 只展示新名，并注明旧名兼容。
 
 ## 测连通（Connection Test）
 

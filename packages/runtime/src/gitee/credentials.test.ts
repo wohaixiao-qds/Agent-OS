@@ -15,16 +15,16 @@ describe("gitee credentials", () => {
   let dir: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-gitee-cred-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-gitee-cred-"));
     setGiteeCredentialsDataDir(dir);
-    delete process.env.ML_AOS_GITEE_TOKEN;
+    delete process.env.ZY_AOS_GITEE_TOKEN;
     delete process.env.MI_CLAW_GITEE_TOKEN;
     delete process.env.GITEE_ENT_MCP_ACCESS_TOKEN;
-    delete process.env.ML_AOS_GITEE_ENTERPRISE_ID;
+    delete process.env.ZY_AOS_GITEE_ENTERPRISE_ID;
     delete process.env.MI_CLAW_GITEE_ENTERPRISE_ID;
-    delete process.env.ML_AOS_GITEE_USER_ID;
+    delete process.env.ZY_AOS_GITEE_USER_ID;
     delete process.env.GITEE_USER_ID;
-    delete process.env.ML_AOS_GITEE_API_BASE;
+    delete process.env.ZY_AOS_GITEE_API_BASE;
     delete process.env.GITEE_ENT_API_BASE;
   });
 
@@ -61,9 +61,9 @@ describe("gitee credentials", () => {
       },
       dir,
     );
-    process.env.ML_AOS_GITEE_TOKEN = "env-token";
-    process.env.ML_AOS_GITEE_ENTERPRISE_ID = "env-ent";
-    process.env.ML_AOS_GITEE_USER_ID = "env-user";
+    process.env.ZY_AOS_GITEE_TOKEN = "env-token";
+    process.env.ZY_AOS_GITEE_ENTERPRISE_ID = "env-ent";
+    process.env.ZY_AOS_GITEE_USER_ID = "env-user";
     const config = resolveGiteeCredentials(dir);
     expect(config).toMatchObject({
       token: "env-token",

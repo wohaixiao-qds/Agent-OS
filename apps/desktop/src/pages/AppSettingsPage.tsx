@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import type { AppSettings, EngineKind } from "@ml-aos/shared";
+import type { AppSettings, EngineKind } from "@zy-aos/shared";
 import {
   api,
   type GiteeIntegrationSettings,
@@ -361,7 +361,7 @@ export function AppSettingsPage() {
               : (gitee?.projectsConfigPath ?? "（加载中）")}{" "}
           </code>
           {gitee?.projectsConfigViaEnv
-            ? "（由环境变量 GITEE_PROJECTS_CONFIG / ML_AOS_GITEE_PROJECTS_CONFIG 覆盖）"
+            ? "（由环境变量 GITEE_PROJECTS_CONFIG / ZY_AOS_GITEE_PROJECTS_CONFIG 覆盖）"
             : "（默认位于数据目录；仓库内仅保留 example）"}
           {gitee != null ? ` · 白名单条目 ${gitee.allowlistCount}` : null}
         </p>

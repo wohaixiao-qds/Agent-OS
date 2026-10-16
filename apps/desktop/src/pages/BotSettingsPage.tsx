@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { BotConfig, EngineKind, SkillBinding } from "@ml-aos/shared";
+import type { BotConfig, EngineKind, SkillBinding } from "@zy-aos/shared";
 import { api } from "../lib/api";
 
 const ENGINES: EngineKind[] = ["claude", "codex"];

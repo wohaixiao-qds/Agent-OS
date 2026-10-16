@@ -9,7 +9,7 @@ import {
   ChatMessageSchema,
   PipelineTaskSchema,
   StoredUserSchema,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 import type { AppState } from "../app-state.js";
 
 const FILES = {

@@ -69,7 +69,7 @@ interface PagedIssues {
   total_count?: number;
 }
 
-const MCP_USER_AGENT = "mcp-gitee-ent ml-aos Go/windows/amd64/node";
+const MCP_USER_AGENT = "mcp-gitee-ent zy-aos Go/windows/amd64/node";
 
 /** @deprecated Prefer resolveGiteeCredentials — kept for call-site compatibility. */
 export function readGiteeEnvConfig(): GiteeEnvConfig {

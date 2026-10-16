@@ -1,4 +1,4 @@
-import type { BotConfig } from "@ml-aos/shared";
+import type { BotConfig } from "@zy-aos/shared";
 
 export type BotTone = "ceo" | "dev" | "test" | "review" | "default";
 

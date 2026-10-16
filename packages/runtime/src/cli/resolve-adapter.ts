@@ -1,4 +1,4 @@
-import type { EngineKind } from "@ml-aos/shared";
+import type { EngineKind } from "@zy-aos/shared";
 import type { CliAdapter } from "./types.js";
 import { ClaudeCliAdapter } from "./claude-adapter.js";
 import { CodexCliAdapter } from "./codex-adapter.js";

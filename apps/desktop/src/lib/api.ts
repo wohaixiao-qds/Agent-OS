@@ -9,7 +9,7 @@ import type {
   Topic,
   User,
   Workspace,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 import type {
   BoardSummary,
   BoardTask,
@@ -51,7 +51,7 @@ export type AgentScheduleTask = {
 };
 
 let authToken: string | null =
-  typeof window !== "undefined" ? localStorage.getItem("ml_aos_token") : null;
+  typeof window !== "undefined" ? localStorage.getItem("zy_aos_token") : null;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
@@ -141,9 +141,9 @@ export const api = {
     authToken = token;
     if (typeof window !== "undefined") {
       if (token) {
-        localStorage.setItem("ml_aos_token", token);
+        localStorage.setItem("zy_aos_token", token);
       } else {
-        localStorage.removeItem("ml_aos_token");
+        localStorage.removeItem("zy_aos_token");
       }
     }
   },

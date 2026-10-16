@@ -55,7 +55,7 @@ async function baseState(dir: string): Promise<AppState> {
 
 describe("TeamHandoff (agent-os isomorphic)", () => {
   it("opens a spec confirm card instead of auto-starting development", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-handoff-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-handoff-"));
     const store = new JsonStore(dir);
     await store.save(await baseState(dir));
     const bots = new BotService(store);
@@ -111,7 +111,7 @@ describe("TeamHandoff (agent-os isomorphic)", () => {
   });
 
   it("reports developer results to CEO instead of auto-starting tester", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-report-ceo-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-report-ceo-"));
     const store = new JsonStore(dir);
     await store.save({
       ...(await baseState(dir)),
@@ -169,7 +169,7 @@ describe("TeamHandoff (agent-os isomorphic)", () => {
   });
 
   it("corrects CEO when feature task has verbal dispatch only", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-ceo-guard-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-ceo-guard-"));
     const store = new JsonStore(dir);
     await store.save({
       ...(await baseState(dir)),
@@ -228,7 +228,7 @@ describe("TeamHandoff (agent-os isomorphic)", () => {
   });
 
   it("does not force dispatch when CEO origin is handoff (worker report-back)", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-ceo-collab-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-ceo-collab-"));
     const store = new JsonStore(dir);
     await store.save({
       ...(await baseState(dir)),
@@ -288,7 +288,7 @@ describe("TeamHandoff (agent-os isomorphic)", () => {
   });
 
   it("falls back to developer when no product bot after failed correction", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-ceo-dev-fallback-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-ceo-dev-fallback-"));
     const store = new JsonStore(dir);
     await store.save({
       ...(await baseState(dir)),
@@ -359,7 +359,7 @@ describe("TeamHandoff (agent-os isomorphic)", () => {
   });
 
   it("falls back to developer when Cast excludes product even if product bot exists", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-ceo-cast-fallback-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-ceo-cast-fallback-"));
     const store = new JsonStore(dir);
     await writeFile(
       join(dir, "gitee-dispatches.json"),
@@ -444,7 +444,7 @@ describe("TeamHandoff (agent-os isomorphic)", () => {
   });
 
   it("falls back to product after failed CEO correction", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-ceo-fallback-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-ceo-fallback-"));
     const store = new JsonStore(dir);
     await store.save({
       ...(await baseState(dir)),

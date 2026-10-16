@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { BotConfig } from "@ml-aos/shared";
+import type { BotConfig } from "@zy-aos/shared";
 import { IconArrowUp, IconAt, IconChevronDown } from "../shell/icons";
 
 type ComposerProps = {

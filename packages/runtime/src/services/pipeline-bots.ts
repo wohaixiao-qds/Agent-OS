@@ -1,4 +1,4 @@
-import type { BotConfig } from "@ml-aos/shared";
+import type { BotConfig } from "@zy-aos/shared";
 
 export const STAGE_ROLES: Record<"developing" | "testing" | "reviewing", string> =
   {

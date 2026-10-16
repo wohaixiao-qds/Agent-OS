@@ -110,7 +110,7 @@
 - **决策**：
   1. 派发前 **必须再拉一次 Issue 详情**（不依赖列表缓存）。
   2. 写入 CEO prompt 至少包含：项目、迭代、ident、标题、**完整描述**、Gitee URL、工作目录、引擎、Cast（**不含**优先级/创建人/计划时间——详情浮层已展示，派发不必重复）。
-  3. **图片**：从描述中解析附图（markdown / HTML `img`）；用当前 token **下载到** `{localPath}/.ml-aos/tickets/{ident}/`，prompt 中列出本地路径，便于引擎 `Read`；下载失败则附上原始 URL 并注明需人工打开链接。
+  3. **图片**：从描述中解析附图（markdown / HTML `img`）；用当前 token **下载到** `{localPath}/.zy-aos/tickets/{ident}/`，prompt 中列出本地路径，便于引擎 `Read`；下载失败则附上原始 URL 并注明需人工打开链接。
   4. 描述为空时明确写「（无描述）」，避免 CEO 臆造需求。
 - **不做（首版）**：把图片嵌进聊天气泡 UI；改 Gitee 描述。
 
@@ -118,7 +118,7 @@
 
 - **决策**：详情内点缩略图 → **应用内灯箱**放大（桌面 WebView 内层，不依赖再开一套浏览器）。
 - **附加**：灯箱提供「在系统浏览器打开原图」（Tauri / OS 用默认浏览器打开图片 URL）。
-- **说明**：ml-aos 是桌面壳 + 内嵌页面；日常浏览工单不需要单独「浏览器窗口」。只有点「在 Gitee 打开 / 打开原图」时才会调系统默认浏览器。
+- **说明**：zy-aos 是桌面壳 + 内嵌页面；日常浏览工单不需要单独「浏览器窗口」。只有点「在 Gitee 打开 / 打开原图」时才会调系统默认浏览器。
 - **多图**：同一工单多附图时可在灯箱内切换；Esc / 点遮罩关闭。
 - **文案**：Markdown 默认 alt（如「输入图片说明」）不展示为可编辑框；无意义 alt 可隐藏。
 
@@ -205,7 +205,7 @@ Topic.meta? {
 2. 点卡片可看到描述、优先级、创建人、计划/截止时间；附图可灯箱放大；可打开 Gitee。
 3. 详情可填「补充说明」；交给 CEO 时追加进 prompt；不填也可派发；不写回 Gitee、不落本地草稿。
 4. 未配置目录时点「交给 CEO」会提示去配置，不产生空话题。
-5. 「交给 CEO」后话题首条/prompt 含完整描述（及非空补充）；有图则工作目录下出现 `.ml-aos/tickets/{ident}/` 文件且 prompt 引用路径。
+5. 「交给 CEO」后话题首条/prompt 含完整描述（及非空补充）；有图则工作目录下出现 `.zy-aos/tickets/{ident}/` 文件且 prompt 引用路径。
 6. 配置 Cast=[developer,tester] 后，CEO 派发目标若不在 Cast 内应被拒绝或提示（实现时在 handoff/守卫层约束）。
 7. 「工单状态」只显示引擎与工作目录，无 Git URL；与详情浮层分离。
 8. 每次交给 CEO 都新建话题，且能从话题追溯 Issue 链接。
@@ -214,7 +214,7 @@ Topic.meta? {
 
 ## 接入说明（实现）
 
-1. 凭证：设置页「集成 / Gitee」，或本机 `.env` 的 `ML_AOS_GITEE_TOKEN` / `ML_AOS_GITEE_ENTERPRISE_ID` / `ML_AOS_GITEE_USER_ID`（旧名 `MI_CLAW_*` 仍兼容）
+1. 凭证：设置页「集成 / Gitee」，或本机 `.env` 的 `ZY_AOS_GITEE_TOKEN` / `ZY_AOS_GITEE_ENTERPRISE_ID` / `ZY_AOS_GITEE_USER_ID`（旧名 `MI_CLAW_*` 仍兼容）
 2. **不必**写死 `gitee-projects.json`：右栏会调 Gitee `/{enterprise}/programs` 拉已加入项目；点「↻」可刷新
 3. 可选：复制 `config/gitee-projects.example.json` → 本机白名单（默认 `dataDir/gitee-projects.json`；见 ADR 0001–0003）
 4. Runtime 启动时自动 `loadDotEnv()`；右栏拉 `/api/tickets/*`；详情 `GET /api/tickets/projects/:id/issues/:issueId`

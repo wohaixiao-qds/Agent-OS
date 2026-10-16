@@ -52,7 +52,7 @@ describe("BotRunService", () => {
   let botId: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-botrun-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-botrun-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
 

@@ -1,5 +1,5 @@
 {
-  "name": "@ml-aos/desktop",
+  "name": "@zy-aos/desktop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +14,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@ml-aos/shared": "workspace:*",
+    "@zy-aos/shared": "workspace:*",
     "@tauri-apps/api": "^2.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

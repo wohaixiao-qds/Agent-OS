@@ -1,4 +1,4 @@
-import type { BotConfig, ChatMessage } from "@ml-aos/shared";
+import type { BotConfig, ChatMessage } from "@zy-aos/shared";
 import { BotAvatar } from "../BotAvatar";
 import { botTone } from "../../lib/bot-style";
 import { ClarificationCard } from "./ClarificationCard";

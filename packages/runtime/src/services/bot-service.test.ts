@@ -27,7 +27,7 @@ describe("BotService", () => {
   let store: JsonStore;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-bot-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-bot-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
   });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   formatChoiceAnswers,
   type ChoiceQuestion,
-} from "@ml-aos/shared";
+} from "@zy-aos/shared";
 
 type ChoiceCardProps = {
   questions: ChoiceQuestion[];

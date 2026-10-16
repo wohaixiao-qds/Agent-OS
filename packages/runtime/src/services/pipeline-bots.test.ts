@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { BotConfig } from "@ml-aos/shared";
+import type { BotConfig } from "@zy-aos/shared";
 import { STAGE_ROLES, resolveStageBotIds } from "./pipeline-bots.js";
 
 function bot(partial: Partial<BotConfig> & Pick<BotConfig, "id" | "role">): BotConfig {

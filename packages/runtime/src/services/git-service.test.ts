@@ -17,7 +17,7 @@ function git(cwd: string, ...args: string[]): void {
 
 describe("git-service", () => {
   (hasGit ? it : it.skip)("clones into empty dir", async () => {
-    const base = await mkdtemp(join(tmpdir(), "ml-aos-git-"));
+    const base = await mkdtemp(join(tmpdir(), "zy-aos-git-"));
     const source = join(base, "source");
     const target = join(base, "clone");
 

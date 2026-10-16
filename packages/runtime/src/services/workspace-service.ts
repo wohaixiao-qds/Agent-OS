@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { access, readdir, stat } from "node:fs/promises";
-import type { Workspace } from "@ml-aos/shared";
+import type { Workspace } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import { cloneRepo } from "./git-service.js";
 export interface CreateWorkspaceInput {

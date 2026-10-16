@@ -47,7 +47,7 @@ export function setGiteeCredentialsDataDir(dataDir: string): void {
 export function getGiteeCredentialsDataDir(): string {
   return (
     credentialsDataDir ??
-    process.env.ML_AOS_DATA_DIR?.trim() ??
+    process.env.ZY_AOS_DATA_DIR?.trim() ??
     join(process.cwd(), "data")
   );
 }
@@ -76,16 +76,16 @@ export function readEnvGiteePartial(): {
 } {
   return {
     token: envPick(
-      "ML_AOS_GITEE_TOKEN",
+      "ZY_AOS_GITEE_TOKEN",
       "MI_CLAW_GITEE_TOKEN",
       "GITEE_ENT_MCP_ACCESS_TOKEN",
     ),
     enterpriseId: envPick(
-      "ML_AOS_GITEE_ENTERPRISE_ID",
+      "ZY_AOS_GITEE_ENTERPRISE_ID",
       "MI_CLAW_GITEE_ENTERPRISE_ID",
     ),
-    userId: envPick("ML_AOS_GITEE_USER_ID", "GITEE_USER_ID"),
-    apiBase: envPick("ML_AOS_GITEE_API_BASE", "GITEE_ENT_API_BASE"),
+    userId: envPick("ZY_AOS_GITEE_USER_ID", "GITEE_USER_ID"),
+    apiBase: envPick("ZY_AOS_GITEE_API_BASE", "GITEE_ENT_API_BASE"),
   };
 }
 
@@ -224,15 +224,15 @@ export function resolveGiteeCredentials(
   ).replace(/\/$/, "");
 
   if (!token) {
-    throw new Error(`缺少 Gitee Token（ML_AOS_GITEE_TOKEN）。${SETTINGS_HINT}`);
+    throw new Error(`缺少 Gitee Token（ZY_AOS_GITEE_TOKEN）。${SETTINGS_HINT}`);
   }
   if (!enterpriseId) {
     throw new Error(
-      `缺少 Gitee 企业 ID（ML_AOS_GITEE_ENTERPRISE_ID）。${SETTINGS_HINT}`,
+      `缺少 Gitee 企业 ID（ZY_AOS_GITEE_ENTERPRISE_ID）。${SETTINGS_HINT}`,
     );
   }
   if (!userId) {
-    throw new Error(`缺少 Gitee 用户 ID（ML_AOS_GITEE_USER_ID）。${SETTINGS_HINT}`);
+    throw new Error(`缺少 Gitee 用户 ID（ZY_AOS_GITEE_USER_ID）。${SETTINGS_HINT}`);
   }
   return { token, enterpriseId, userId, apiBase };
 }

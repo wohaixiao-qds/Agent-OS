@@ -9,7 +9,7 @@ describe("loadDotEnv", () => {
   const saved: Record<string, string | undefined> = {};
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "ml-aos-env-"));
+    root = await mkdtemp(join(tmpdir(), "zy-aos-env-"));
     await writeFile(join(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
     await mkdir(join(root, "packages", "runtime"), { recursive: true });
     await writeFile(

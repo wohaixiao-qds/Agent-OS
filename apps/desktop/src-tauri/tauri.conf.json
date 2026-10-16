@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "ML AOS",
+  "productName": "ZY AOS",
   "version": "0.1.2",
-  "identifier": "com.miluo.ml-aos",
+  "identifier": "com.wohaixiao.agent-os",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ML AOS",
+        "title": "ZY AOS",
         "width": 1440,
         "height": 900,
         "resizable": true,

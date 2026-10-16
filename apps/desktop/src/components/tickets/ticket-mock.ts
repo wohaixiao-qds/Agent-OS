@@ -6,7 +6,7 @@ export const MOCK_TICKET_PROJECTS: TicketProject[] = [
     name: "航研所项目",
     programId: "818309",
     ident: "PJ20251201",
-    localPath: "E:\\\\Python_Project\\\\ml-aos",
+    localPath: "E:\\\\Python_Project\\\\zy-aos",
     defaultEngine: "claude",
     cast: ["ceo", "product", "developer", "tester", "reviewer"],
   },

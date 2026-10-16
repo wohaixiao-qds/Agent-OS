@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { BotConfig, PipelineTask } from "@ml-aos/shared";
+import type { BotConfig, PipelineTask } from "@zy-aos/shared";
 import { api } from "../lib/api";
 
 const STAGE_LABEL: Record<string, string> = {

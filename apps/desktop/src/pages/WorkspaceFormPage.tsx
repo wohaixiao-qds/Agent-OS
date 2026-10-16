@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import type { Workspace } from "@ml-aos/shared";
+import type { Workspace } from "@zy-aos/shared";
 import { api } from "../lib/api";
 import { pickFolder } from "../lib/tauri";
 import { folderLastName } from "../lib/workspace-name";

@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { HomeShowcase } from "./HomeShowcase";
-import type { BotConfig, Workspace } from "@ml-aos/shared";
+import type { BotConfig, Workspace } from "@zy-aos/shared";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -53,7 +53,7 @@ describe("HomeShowcase Component", () => {
       );
     });
 
-    expect(container.textContent).toContain("MLAOS");
+    expect(container.textContent).toContain("ZYAOS");
     expect(container.textContent).toContain("智能体操作系统");
     expect(container.textContent).toContain("AI 数字化员工团队协作");
     expect(container.textContent).not.toContain("Gitee");

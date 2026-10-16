@@ -4,7 +4,7 @@ import type { AcceptanceService } from "../services/acceptance-service.js";
 import type { AcceptanceRunner } from "../services/acceptance-runner.js";
 import type { WorkspaceService } from "../services/workspace-service.js";
 import type { JsonStore } from "../store/json-store.js";
-import { AcceptanceSubmissionSchema } from "@ml-aos/shared";
+import { AcceptanceSubmissionSchema } from "@zy-aos/shared";
 
 export function registerAcceptanceRoutes(
   router: {

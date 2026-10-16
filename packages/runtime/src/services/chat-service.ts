@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChatMessage, Topic } from "@ml-aos/shared";
+import type { ChatMessage, Topic } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { WorkspaceService } from "./workspace-service.js";
 import type { BotService } from "./bot-service.js";

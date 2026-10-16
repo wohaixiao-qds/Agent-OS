@@ -1,4 +1,4 @@
-import type { AppSettings, ThemeMode, EngineKind } from "@ml-aos/shared";
+import type { AppSettings, ThemeMode, EngineKind } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 
 export type UpdateSettingsInput = Partial<{

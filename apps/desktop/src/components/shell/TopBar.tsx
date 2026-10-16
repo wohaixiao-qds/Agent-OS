@@ -34,7 +34,7 @@ export function TopBar({ theme, onThemeChange, showPanelToggle = false }: TopBar
       <div className="topbar-left">
         <Link to="/" className="brand" style={{ textDecoration: "none", color: "inherit" }} title="返回封面首页">
           <img className="brand-logo" src="/logo.png" alt="" />
-          <span className="brand-name">MLAOS</span>
+          <span className="brand-name">ZYAOS</span>
           <span className="brand-divider" aria-hidden />
           <span className="brand-slogan">智能体操作系统</span>
         </Link>

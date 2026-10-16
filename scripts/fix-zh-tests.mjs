@@ -77,7 +77,7 @@ import { ScheduleService, cronMatches } from "./schedule-service.js";
 
 describe("ScheduleService", () => {
   it("creates, pauses, and lists a task", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-schedule-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-schedule-"));
     const service = new ScheduleService(dir, async () => undefined);
     const notice = await service.manage(
       {

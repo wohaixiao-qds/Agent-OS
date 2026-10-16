@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { BotConfig, EngineKind } from "@ml-aos/shared";
+import type { BotConfig, EngineKind } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import { DEFAULT_TEAM_BOTS } from "../seed/default-bots.js";
 import { skillEditorToken } from "./skill-paths.js";

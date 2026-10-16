@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@ml-aos/shared";
+import type { ChatMessage } from "@zy-aos/shared";
 import { ChoiceCard } from "./ChoiceCard";
 import { api } from "../../lib/api";
 

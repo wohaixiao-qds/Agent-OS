@@ -4,8 +4,8 @@ import { dirname, join, resolve } from "node:path";
 import type {
   AcceptanceResult,
   AcceptanceSubmission,
-} from "@ml-aos/shared";
-import { AcceptanceSubmissionSchema } from "@ml-aos/shared";
+} from "@zy-aos/shared";
+import { AcceptanceSubmissionSchema } from "@zy-aos/shared";
 import type { GiteeProjectsStore } from "../gitee/projects.js";
 
 export type ProjectTestEnv = {
@@ -56,7 +56,7 @@ export class AcceptanceService {
     if (input.workspacePath?.trim()) {
       const wsDir = join(
         resolve(input.workspacePath),
-        ".ml-aos",
+        ".zy-aos",
         "acceptance",
       );
       await mkdir(wsDir, { recursive: true });
@@ -130,9 +130,9 @@ export class AcceptanceService {
     const lines = [
       "—— 验收门禁（必须）——",
       "结束后必须调用 MCP 工具 submit_acceptance（server=agent_os），提交结构化结果；不要只在正文写「通过/失败」。",
-      "优先用 $agent-browser 做真实页面验收；截图放到工作区 .ml-aos/acceptance/ 下并在 evidence 中引用路径。",
+      "优先用 $agent-browser 做真实页面验收；截图放到工作区 .zy-aos/acceptance/ 下并在 evidence 中引用路径。",
       "无 UI 的纯库项目可用 verdict=skip 并填写 skipReason。",
-      "若工作区存在 .ml-aos/acceptance/playwright.config.ts 或 acceptance/playwright.config.ts，可调用 run_acceptance_suite 跑回归套件。",
+      "若工作区存在 .zy-aos/acceptance/playwright.config.ts 或 acceptance/playwright.config.ts，可调用 run_acceptance_suite 跑回归套件。",
     ];
     if (env.testBaseUrl) {
       lines.push(`被测 baseURL：${env.testBaseUrl}`);

@@ -18,8 +18,8 @@ describe("skill-paths", () => {
   });
 
   it("resolves the user skill library and ignores a workspace copy", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-skill-"));
-    const workspace = await mkdtemp(join(tmpdir(), "ml-aos-ws-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-skill-"));
+    const workspace = await mkdtemp(join(tmpdir(), "zy-aos-ws-"));
     const skillDir = join(home, ".agents", "skills", "grill-me");
     await mkdir(skillDir, { recursive: true });
     await writeFile(join(skillDir, "SKILL.md"), "# grill\n", "utf-8");
@@ -38,7 +38,7 @@ describe("skill-paths", () => {
   });
 
   it("reports missing skills per bot", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ml-aos-miss-"));
+    const home = await mkdtemp(join(tmpdir(), "zy-aos-miss-"));
     const skillId = "zz-missing-skill-for-test";
     const missing = findMissingSkills(
       [
@@ -60,7 +60,7 @@ describe("skill-paths", () => {
 describe("skill-seed", () => {
   it("copies bundled skills into workspace without overwrite", async () => {
     expect(existsSync(bundledSkillsRoot())).toBe(true);
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-seed-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-seed-"));
     const seeded = await seedBundledSkills(dir);
     expect(seeded.length).toBeGreaterThan(0);
     expect(seeded).toContain("grill-me");

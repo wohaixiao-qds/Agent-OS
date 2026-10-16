@@ -21,7 +21,7 @@ describe("acceptance schema", () => {
               detail: "按钮 disabled",
             },
           ],
-          evidence: [{ kind: "screenshot", path: ".ml-aos/acceptance/a.png" }],
+          evidence: [{ kind: "screenshot", path: ".zy-aos/acceptance/a.png" }],
           source: "agent-browser",
         },
       },

@@ -66,7 +66,7 @@ describe("PipelineRunner", () => {
   let topicId: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-runner-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-runner-"));
     store = new JsonStore(dir);
     await store.save(await emptyState(dir));
 

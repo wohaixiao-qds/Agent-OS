@@ -48,7 +48,7 @@ loadDotEnv();
 const HOST = "127.0.0.1";
 const PORT = 17890;
 
-const dataDir = process.env.ML_AOS_DATA_DIR ?? join(process.cwd(), "data");
+const dataDir = process.env.ZY_AOS_DATA_DIR ?? join(process.cwd(), "data");
 setGiteeCredentialsDataDir(dataDir);
 const store = new JsonStore(dataDir);
 const workspaceService = new WorkspaceService(store);
@@ -102,7 +102,7 @@ const chatService = new ChatService(
   botRunService,
 );
 const mockAutoAdvanceMs =
-  process.env.ML_AOS_MOCK_PIPELINE_TIMER === "1" ? 5000 : undefined;
+  process.env.ZY_AOS_MOCK_PIPELINE_TIMER === "1" ? 5000 : undefined;
 const taskBoard = new TaskBoardService(dataDir);
 const pipelineService = new PipelineService(
   store,

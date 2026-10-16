@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { ChatMessage } from "@ml-aos/shared";
+import type { ChatMessage } from "@zy-aos/shared";
 
 type RunCardProps = {
   message: ChatMessage;

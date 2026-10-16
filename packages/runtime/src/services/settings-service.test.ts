@@ -10,7 +10,7 @@ describe("SettingsService", () => {
   let service: SettingsService;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-settings-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-settings-"));
     service = new SettingsService(new JsonStore(dir));
   });
 

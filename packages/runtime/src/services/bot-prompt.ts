@@ -1,4 +1,4 @@
-import type { BotConfig, SkillBinding } from "@ml-aos/shared";
+import type { BotConfig, SkillBinding } from "@zy-aos/shared";
 
 /** Compose system instructions + skill load rules + task (agent-os style). */
 export function buildBotPrompt(

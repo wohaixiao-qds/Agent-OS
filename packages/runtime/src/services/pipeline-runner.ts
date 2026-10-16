@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChatMessage, PipelineStage } from "@ml-aos/shared";
+import type { ChatMessage, PipelineStage } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { ChatEvent } from "./chat-service.js";
 import type { BotRunService } from "./bot-run-service.js";
@@ -44,7 +44,7 @@ function buildStagePrompt(input: {
       "完成本阶段审查：独立审查变更，明确给出 REVIEW_PASSED 或 REVIEW_FAILED 及理由。",
   };
   return [
-    "[ML AOS 流水线]",
+    "[ZY AOS 流水线]",
     `阶段：${input.stage}（角色：${role}）`,
     `任务：${input.title}`,
     `工作区：${input.localPath}`,

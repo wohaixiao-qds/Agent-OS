@@ -38,7 +38,7 @@ export function resolveClaudeCommand(
   platform: NodeJS.Platform = process.platform,
   execPath: string = process.execPath,
 ): string {
-  const override = env.ML_AOS_CLAUDE_PATH?.trim();
+  const override = env.ZY_AOS_CLAUDE_PATH?.trim();
   if (override) return override;
 
   if (platform !== "win32") {

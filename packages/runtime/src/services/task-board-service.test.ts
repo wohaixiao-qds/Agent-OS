@@ -12,7 +12,7 @@ describe("TaskBoardService", () => {
   let svc: TaskBoardService;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-board-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-board-"));
     svc = new TaskBoardService(dir);
   });
   afterEach(async () => {

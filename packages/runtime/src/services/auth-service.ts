@@ -1,8 +1,8 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import type { AuthResponse, StoredUser, User } from "@ml-aos/shared";
+import type { AuthResponse, StoredUser, User } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 
-const DEFAULT_SECRET = "ml-aos-secret-key-default-2026";
+const DEFAULT_SECRET = "zy-aos-secret-key-default-2026";
 
 function base64UrlEncode(str: string): string {
   return Buffer.from(str)
@@ -89,7 +89,7 @@ export function verifyJwtToken(token: string, secret = DEFAULT_SECRET): JwtPaylo
 export class AuthService {
   constructor(
     private readonly store: JsonStore,
-    private readonly secret = process.env.ML_AOS_JWT_SECRET || DEFAULT_SECRET,
+    private readonly secret = process.env.ZY_AOS_JWT_SECRET || DEFAULT_SECRET,
   ) {}
 
   private sanitize(user: StoredUser): User {

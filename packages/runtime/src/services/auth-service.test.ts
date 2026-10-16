@@ -16,7 +16,7 @@ describe("AuthService & crypto utilities", () => {
   let authService: AuthService;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-auth-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-auth-"));
     authService = new AuthService(new JsonStore(dir), "test-jwt-secret-xyz");
   });
 

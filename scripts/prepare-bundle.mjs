@@ -31,7 +31,7 @@ const runtimeOut = join(resourcesRoot, "runtime");
 const nodeOut = join(resourcesRoot, "node");
 const cacheDir = join(repoRoot, ".cache", "node-portable");
 
-const NODE_VERSION = process.env.ML_AOS_NODE_VERSION?.trim() || "22.14.0";
+const NODE_VERSION = process.env.ZY_AOS_NODE_VERSION?.trim() || "22.14.0";
 
 function platformSpec() {
   const { platform, arch } = process;

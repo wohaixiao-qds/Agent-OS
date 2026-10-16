@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Topic } from "@ml-aos/shared";
+import type { Topic } from "@zy-aos/shared";
 import { useShell } from "../../lib/shell-context";
 import { IconChevronDown, IconGrid, IconPlus, IconTrash } from "./icons";
 

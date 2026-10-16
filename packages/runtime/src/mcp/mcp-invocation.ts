@@ -41,7 +41,7 @@ export function resolveMcpServerInvocation(): McpServerInvocation {
   return { command: process.execPath, args: [tsxCli, serverTs] };
 }
 
-/** Prefer ML_AOS_DATA_DIR so packaged installs do not write under resources/. */
+/** Prefer ZY_AOS_DATA_DIR so packaged installs do not write under resources/. */
 export function mcpConfigDataDir(): string {
-  return process.env.ML_AOS_DATA_DIR?.trim() || join(process.cwd(), "data");
+  return process.env.ZY_AOS_DATA_DIR?.trim() || join(process.cwd(), "data");
 }

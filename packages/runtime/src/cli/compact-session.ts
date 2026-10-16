@@ -146,7 +146,7 @@ function compactCodex(input: CompactSessionInput): Promise<CompactSessionResult>
       reject(new Error("上下文整理已取消"));
       return;
     }
-    const command = process.env.ML_AOS_CODEX_PATH?.trim() || "codex";
+    const command = process.env.ZY_AOS_CODEX_PATH?.trim() || "codex";
     const child = spawn(command, ["app-server", "--stdio"], {
       cwd: input.cwd,
       stdio: ["pipe", "pipe", "pipe"],
@@ -241,8 +241,8 @@ function compactCodex(input: CompactSessionInput): Promise<CompactSessionResult>
       method: "initialize",
       params: {
         clientInfo: {
-          name: "ml_aos",
-          title: "ML AOS",
+          name: "zy_aos",
+          title: "ZY AOS",
           version: "0.1.0",
         },
       },

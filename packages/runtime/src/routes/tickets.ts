@@ -30,7 +30,7 @@ export function registerTicketRoutes(
       sendJson(res, 200, projects);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bad request";
-      const status = /缺少|MI_CLAW|ML_AOS_GITEE|GITEE_|无法从 Gitee/i.test(message)
+      const status = /缺少|MI_CLAW|ZY_AOS_GITEE|GITEE_|无法从 Gitee/i.test(message)
         ? 503
         : 500;
       sendError(res, status, message);
@@ -64,7 +64,7 @@ export function registerTicketRoutes(
       sendJson(res, 200, todos);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bad request";
-      const status = /缺少|MI_CLAW|ML_AOS_GITEE|GITEE_/.test(message)
+      const status = /缺少|MI_CLAW|ZY_AOS_GITEE|GITEE_/.test(message)
         ? 503
         : /不存在/i.test(message)
           ? 404
@@ -84,7 +84,7 @@ export function registerTicketRoutes(
         sendJson(res, 200, detail);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Bad request";
-        const status = /缺少|MI_CLAW|ML_AOS_GITEE|GITEE_/.test(message)
+        const status = /缺少|MI_CLAW|ZY_AOS_GITEE|GITEE_/.test(message)
           ? 503
           : /不存在|无效|404/i.test(message)
             ? 404
@@ -103,7 +103,7 @@ export function registerTicketRoutes(
         sendJson(res, 200, states);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Bad request";
-        const status = /缺少|MI_CLAW|ML_AOS_GITEE|GITEE_/.test(message)
+        const status = /缺少|MI_CLAW|ZY_AOS_GITEE|GITEE_/.test(message)
           ? 503
           : /不存在|无效|404|需使用数字 id/i.test(message)
             ? 404
@@ -133,7 +133,7 @@ export function registerTicketRoutes(
         sendJson(res, 200, result);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Bad request";
-        const status = /缺少|MI_CLAW|ML_AOS_GITEE|GITEE_/.test(message)
+        const status = /缺少|MI_CLAW|ZY_AOS_GITEE|GITEE_/.test(message)
           ? 503
           : /不存在|无效|404|需使用数字 id/i.test(message)
             ? 404

@@ -31,7 +31,7 @@ function port(overrides?: Partial<AgentSchedulePort>): AgentSchedulePort & {
 
 describe("AgentScheduleService", () => {
   it("adds a draft without creating a topic", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-agent-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-agent-"));
     const gate = port();
     const service = new AgentScheduleService(dir, gate);
     const task = await service.add({
@@ -46,7 +46,7 @@ describe("AgentScheduleService", () => {
   });
 
   it("start creates one topic and does not run the bot", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-agent-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-agent-"));
     const gate = port();
     const service = new AgentScheduleService(dir, gate);
     const created = await service.add({
@@ -66,7 +66,7 @@ describe("AgentScheduleService", () => {
   });
 
   it("manual run keeps draft status and hands the prompt to the bot", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-agent-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-agent-"));
     const gate = port();
     const service = new AgentScheduleService(dir, gate);
     const created = await service.add({
@@ -83,7 +83,7 @@ describe("AgentScheduleService", () => {
   });
 
   it("tick reuses the topic created at start", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ml-aos-agent-"));
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-agent-"));
     const gate = port();
     const service = new AgentScheduleService(dir, gate);
     const created = await service.add({

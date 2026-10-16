@@ -54,7 +54,7 @@ export type GiteeProjectConfig = GiteeProjectBase & {
 
 function defaultConfigPath(dataDir: string): string {
   return (
-    process.env.ML_AOS_GITEE_PROJECTS_CONFIG?.trim() ||
+    process.env.ZY_AOS_GITEE_PROJECTS_CONFIG?.trim() ||
     process.env.GITEE_PROJECTS_CONFIG?.trim() ||
     resolve(dataDir, "gitee-projects.json")
   );
@@ -79,7 +79,7 @@ export class GiteeProjectsStore {
   async loadLocalAllowlist(): Promise<GiteeProjectBase[]> {
     const candidates = [this.configPath];
     // Soft legacy: repo config/gitee-projects.json (do not commit real lists).
-    if (!process.env.GITEE_PROJECTS_CONFIG?.trim() && !process.env.ML_AOS_GITEE_PROJECTS_CONFIG?.trim()) {
+    if (!process.env.GITEE_PROJECTS_CONFIG?.trim() && !process.env.ZY_AOS_GITEE_PROJECTS_CONFIG?.trim()) {
       candidates.push(
         resolve(findWorkspaceRoot(), "config", "gitee-projects.json"),
       );

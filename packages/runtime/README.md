@@ -1,6 +1,6 @@
-# @ml-aos/runtime
+# @zy-aos/runtime
 
-Local HTTP + WebSocket runtime for ML AOS desktop.
+Local HTTP + WebSocket runtime for ZY AOS desktop.
 
 ## Git clone
 

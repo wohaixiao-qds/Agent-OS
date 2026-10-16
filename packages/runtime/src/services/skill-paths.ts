@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { SkillBinding } from "@ml-aos/shared";
+import type { SkillBinding } from "@zy-aos/shared";
 import { parseSkillToken } from "./skill-catalog.js";
 
 const SKILL_NAME_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;

@@ -1,4 +1,4 @@
-import type { ThemeMode, EngineKind } from "@ml-aos/shared";
+import type { ThemeMode, EngineKind } from "@zy-aos/shared";
 import type { RouteHandler } from "../http/router.js";
 import { readJsonBody, sendError, sendJson } from "../http/json.js";
 import type { SettingsService } from "../services/settings-service.js";

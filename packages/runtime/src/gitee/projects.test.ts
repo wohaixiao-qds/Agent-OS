@@ -26,7 +26,7 @@ describe("GiteeProjectsStore", () => {
   let configPath: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-gitee-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-gitee-"));
     const configDir = join(dir, "config");
     await mkdir(configDir, { recursive: true });
     configPath = join(configDir, "gitee-projects.json");

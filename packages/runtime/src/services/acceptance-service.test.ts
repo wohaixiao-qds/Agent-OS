@@ -8,14 +8,14 @@ describe("AcceptanceService", () => {
   let dir: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "ml-aos-acc-"));
+    dir = await mkdtemp(join(tmpdir(), "zy-aos-acc-"));
   });
 
   afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it("saves to data dir and workspace .ml-aos/acceptance", async () => {
+  it("saves to data dir and workspace .zy-aos/acceptance", async () => {
     const ws = join(dir, "ws");
     const service = new AcceptanceService(dir);
     const result = await service.save({
@@ -40,7 +40,7 @@ describe("AcceptanceService", () => {
     const latest = await service.latest("topic-1");
     expect(latest?.summary).toBe("核心路径通过");
 
-    const wsFile = join(ws, ".ml-aos", "acceptance", `${result.id}.json`);
+    const wsFile = join(ws, ".zy-aos", "acceptance", `${result.id}.json`);
     const raw = JSON.parse(await readFile(wsFile, "utf8"));
     expect(raw.checks).toHaveLength(2);
   });
