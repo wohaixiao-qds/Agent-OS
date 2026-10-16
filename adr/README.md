@@ -10,5 +10,6 @@
 | [0004](./0004-user-config-implementation-checklist.md) | 用户配置实现清单 |
 | [0005](./0005-acceptance-gate.md) | 真实验收门禁 |
 | [0006](./0006-tickets-module.md) | 工单模块设计定稿 |
+| [0007](./0007-multi-ticket-providers.md) | 多工单来源与 Provider 抽象（Gitee + 禅道） |
 
 相关根目录文档：[PRODUCT.md](../PRODUCT.md) · [GLOSSARY.md](../GLOSSARY.md) · [README.md](../README.md)

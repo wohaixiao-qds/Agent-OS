@@ -47,7 +47,7 @@ Windows 安装程序（NSIS）。
 | 能力              | 说明                                                         |
 | --------------- | ---------------------------------------------------------- |
 | **工作台**         | 三栏布局：话题列表、多智能体会话、右侧工单；可用 `@` 提及角色                          |
-| **集成工单**        | 对接 Gitee 企业工单；配置本地目录后「交给 CEO」接入话题                          |
+| **集成工单**        | 对接 Gitee 企业工单与禅道（Bug + 任务）；配置本地目录后「交给 CEO」接入话题              |
 | **CEO 派单**      | 通过 MCP `agent_os` 的 `dispatch_task` 确定性派给产品 / 开发 / 测试 / 审查 |
 | **智能体与 Skills** | 按角色配置引擎（Claude Code / Codex）与本机 Skills（`~/.agents/skills`） |
 | **待确认 (HITL)**  | 澄清卡、规格审批、高危操作需人为介入审批                                       |
@@ -70,7 +70,7 @@ Windows 安装程序（NSIS）。
 3. **跑真实智能体**还需要：
   - 本机安装并登录 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)（`claude` 在 PATH），或 Codex CLI
   - 在 **智能体** 页为各角色配置 Skills（产品默认提示：`grill-me`, `product-spec`；开发：`implement-ticket`），保存完成安装
-4. **拉 Gitee 工单**需要：在 **设置 → 集成工单系统** 填写企业 Token / 企业 ID / 用户 ID，并为项目配置本地目录
+4. **拉工单**需要：在 **设置 → 集成工单系统** 填写凭证（Gitee：企业 Token / 企业 ID / 用户 ID；禅道：服务地址 / 账号 / 密码），并为项目配置本地目录
 5. **飞书群协作（可选）**：需本机或环境具备飞书相关 Skill（如 `lark-cli` / `lark-doc`）及已接入的群机器人；未配置时不影响桌面工作台
 
 未配置 Gitee / 飞书时，本机工作台与对话仍可用；对应通道能力会提示去配置。
@@ -93,7 +93,7 @@ Windows 安装程序（NSIS）。
 1. 打开 [Releases](https://github.com/wohaixiao-qds/Agent-OS/releases)
 2. 下载最新的 `ZYAOS_x.y.z_x64-setup.exe`（NSIS；不要下 Source code zip）
 3. 安装后启动应用；内置便携 Node + runtime
-4. **设置 → 集成工单系统** 填写自己的凭证（开发时也可用根目录 `.env`）
+4. **设置 → 集成工单系统** 填写自己的凭证（Gitee / 禅道；开发时也可用根目录 `.env`）
 5. 安装并登录 Claude Code 或 Codex，再在智能体页保存 Skills
 
 本地打安装包（需 Windows + MSVC + 网络以下载便携 Node）：
