@@ -158,6 +158,23 @@ export function Sidebar() {
     return topics.filter((t) => t.title.toLowerCase().includes(q));
   }, [topics, filter]);
 
+  /** 下拉行内快捷删除：仅解除登记，当前选中的工作区不走此入口。 */
+  async function handleDeleteWorkspaceById(target: {
+    id: string;
+    name: string;
+  }) {
+    const confirmed = window.confirm(
+      `确定删除工作区「${target.name}」？仅解除登记，不会删除本地目录与话题记录。`,
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteWorkspace(target.id);
+      await refreshAll();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "删除失败");
+    }
+  }
+
   async function handleDeleteWorkspace() {
     if (!workspace) return;
     const confirmed = window.confirm(
@@ -209,19 +226,34 @@ export function Sidebar() {
           {menuOpen ? (
             <div className="workspace-dropdown" role="listbox">
               {workspaces.map((w) => (
-                <button
+                <div
                   key={w.id}
-                  type="button"
+                  className="workspace-option"
                   role="option"
                   aria-selected={w.id === workspace?.id}
-                  className={w.id === workspace?.id ? "active" : ""}
-                  onClick={() => {
-                    setWorkspaceId(w.id);
-                    setMenuOpen(false);
-                  }}
                 >
-                  {w.name}
-                </button>
+                  <button
+                    type="button"
+                    className={w.id === workspace?.id ? "active" : ""}
+                    onClick={() => {
+                      setWorkspaceId(w.id);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {w.name}
+                  </button>
+                  {w.id === workspace?.id ? null : (
+                    <button
+                      type="button"
+                      className="workspace-option-remove"
+                      aria-label={`删除工作区 ${w.name}`}
+                      title="删除该工作区（仅解除登记）"
+                      onClick={() => void handleDeleteWorkspaceById(w)}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               ))}
               {workspaces.length === 0 ? (
                 <p className="muted empty-hint">暂无工作区</p>

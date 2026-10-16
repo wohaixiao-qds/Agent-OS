@@ -288,6 +288,37 @@
   background: var(--accent-soft);
 }
 
+/* 工作区行：名称 + 悬停快捷删除（当前打开的除外） */
+.workspace-option {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 6px;
+}
+
+.workspace-option > button:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-option-remove {
+  width: 26px !important;
+  flex-shrink: 0;
+  text-align: center !important;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.workspace-option:hover .workspace-option-remove {
+  opacity: 1;
+}
+
+.workspace-option-remove:hover {
+  color: var(--danger);
+  background: transparent !important;
+}
+
 .workspace-dropdown-danger {
   appearance: none;
   border: none;
