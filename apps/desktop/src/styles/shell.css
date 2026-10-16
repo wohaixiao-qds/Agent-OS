@@ -933,11 +933,44 @@
 }
 
 /* ——— Timeline / messages ——— */
+.timeline-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.timeline-jump {
+  position: absolute;
+  bottom: calc(var(--composer-space, 220px) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.timeline-jump:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .timeline {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 24px;
+}
+
+/* 消息内容整体包一层：高度变化可被 ResizeObserver 观察，用于持续贴底。 */
+.timeline-inner {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -1025,6 +1058,11 @@
 .msg-body {
   font-size: 14px;
   line-height: 1.55;
+}
+
+.msg-body-plain {
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 .md-body {
@@ -1441,6 +1479,30 @@
   color: var(--text-muted);
 }
 
+.ticket-intake-meta {
+  grid-template-columns: 1fr;
+}
+
+.ticket-intake-meta > div {
+  min-width: 0;
+}
+
+.ticket-intake-meta strong {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.ticket-intake-path {
+  font-size: 12px;
+  word-break: break-all;
+  color: var(--text-muted);
+}
+
+.ticket-intake-meta + .run-details,
+.lark-card-foot a {
+  color: var(--accent);
+}
+
 .lark-options {
   display: flex;
   flex-direction: column;
@@ -1589,9 +1651,16 @@
 }
 
 /* ——— Composer ——— */
-.home-center .timeline {
+/* 裸 .timeline（空话题态）仍是 .home-center 直接子元素，保留底部补偿 */
+.home-center > .timeline {
   padding-bottom: var(--composer-space, 220px);
   scroll-padding-bottom: var(--composer-space, 220px);
+}
+
+/* 常规态：滚动区整体止于输入框上沿（padding 在不滚动的 wrap 上，
+   视口底边物理抬高，消息不可能滚进输入框底下） */
+.timeline-wrap {
+  padding-bottom: var(--composer-space, 220px);
 }
 
 .composer {

@@ -1,11 +1,13 @@
+import { useEffect, useRef, useState } from "react";
 import type { BotConfig, ChatMessage } from "@zy-aos/shared";
 import { BotAvatar } from "../BotAvatar";
 import { botTone } from "../../lib/bot-style";
 import { ClarificationCard } from "./ClarificationCard";
-import { DispatchCard } from "./LarkCard";
+import { DispatchCard, TicketIntakeCard } from "./LarkCard";
 import { MarkdownBody } from "./MarkdownBody";
 import { RunCard } from "./RunCard";
 import { AppToolCard, type ControlDecision } from "./AppToolCard";
+import { providerLabel, ticketIntakeView } from "./ticket-intake";
 
 type MessageListProps = {
   messages: ChatMessage[];
@@ -14,6 +16,9 @@ type MessageListProps = {
   onDecideControl: (topicId: string, decision: ControlDecision) => void;
   onAbort?: () => void;
 };
+
+/** 距底部小于该值视为「在底部」：新消息继续贴底；翻历史时不打扰。 */
+const STICK_THRESHOLD_PX = 80;
 
 function authorLabel(
   message: ChatMessage,
@@ -93,19 +98,96 @@ export function MessageList({
   onDecideControl,
   onAbort,
 }: MessageListProps) {
+  const timelineRef = useRef<HTMLDivElement>(null);
+  // 用 state 而不是 ref 承载内层节点：话题为空时走提前 return，内层不渲染，
+  // observer effect 必须等内层真正挂载后才运行（ref 变化不触发 effect）。
+  const [contentEl, setContentEl] = useState<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
+  const [showJump, setShowJump] = useState(false);
+  const prevTopicRef = useRef<string | null>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
+
+  const topicId = messages[0]?.topicId ?? null;
+  const lastMessage = messages[messages.length - 1];
+
+  // 切换话题：重置为贴底，等消息渲染后由下方 effect 滚过去
+  if (prevTopicRef.current !== topicId) {
+    prevTopicRef.current = topicId;
+    stickToBottomRef.current = true;
+    lastMessageIdRef.current = null;
+    if (showJump) setShowJump(false);
+  }
+
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    // 用户自己发了新消息：强制回到底部跟随回复
+    if (
+      lastMessage &&
+      lastMessage.author === "user" &&
+      lastMessage.id !== lastMessageIdRef.current
+    ) {
+      stickToBottomRef.current = true;
+    }
+    if (lastMessage) lastMessageIdRef.current = lastMessage.id;
+    if (stickToBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
+      // 图片/代码块在本次提交后才撑高布局：下一帧再钉一次
+      requestAnimationFrame(() => {
+        if (stickToBottomRef.current && el.isConnected) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    }
+  }, [messages, lastMessage]);
+
+  // 消息不变时内容也会撑高（流式增量、图片加载、卡片展开、代码高亮）：
+  // 盯内容高度持续钉底，否则最新内容会被顶出视口、要手动滚一下才看得见。
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el || !contentEl || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (stickToBottomRef.current) el.scrollTop = el.scrollHeight;
+    });
+    observer.observe(contentEl);
+    return () => observer.disconnect();
+  }, [contentEl]);
+
+  function handleScroll() {
+    const el = timelineRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distance < STICK_THRESHOLD_PX;
+    setShowJump(distance >= STICK_THRESHOLD_PX * 4);
+  }
+
+  function jumpToBottom() {
+    const el = timelineRef.current;
+    if (!el) return;
+    stickToBottomRef.current = true;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    setShowJump(false);
+  }
+
   if (messages.length === 0) {
     return (
       <div className="timeline">
         <p className="muted empty-hint">
-          暂无消息。使用 @ 提及智能体即可开始模拟对话。
+          暂无消息。直接发送默认交给 CEO 助理，或 @ 指定智能体。
         </p>
       </div>
     );
   }
 
   return (
-    <div className="timeline">
-      {messages.map((msg) => {
+    <div className="timeline-wrap">
+      <div
+        className="timeline"
+        ref={timelineRef}
+        onScroll={handleScroll}
+      >
+        <div className="timeline-inner" ref={setContentEl}>
+        {messages.map((msg) => {
         const meta = authorLabel(msg, bots);
         const isYou = msg.author === "user";
         if (msg.kind === "app-tool" && msg.appTool) {
@@ -131,6 +213,22 @@ export function MessageList({
         }
         if (msg.author === "system") {
           if (msg.content.startsWith("▶")) return null;
+          const ticket = msg.ticketIntake
+            ? {
+                ...msg.ticketIntake,
+                providerLabel:
+                  msg.ticketIntake.providerLabel ??
+                  providerLabel(msg.ticketIntake.provider),
+              }
+            : ticketIntakeView(msg.content);
+          if (ticket) {
+            return (
+              <article key={msg.id} className="msg msg-card">
+                <TicketIntakeCard {...ticket} />
+                <span className="msg-time">{formatTime(msg.createdAt)}</span>
+              </article>
+            );
+          }
           const structured = msg.dispatch;
           const card = structured
             ? {
@@ -177,7 +275,13 @@ export function MessageList({
                 ) : null}
                 <span className="msg-time">{formatTime(msg.createdAt)}</span>
               </div>
-              <div className="msg-body">
+              <div
+                className={
+                  msg.author === "system"
+                    ? "msg-body msg-body-plain"
+                    : "msg-body"
+                }
+              >
                 {msg.kind === "mention" ? (
                   <MentionText content={msg.content} />
                 ) : msg.author === "bot" ? (
@@ -191,7 +295,18 @@ export function MessageList({
             </div>
           </article>
         );
-      })}
+        })}
+        </div>
+      </div>
+      {showJump ? (
+        <button
+          type="button"
+          className="timeline-jump"
+          onClick={jumpToBottom}
+        >
+          ↓ 回到最新
+        </button>
+      ) : null}
     </div>
   );
 }
