@@ -621,6 +621,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
       <TicketProjectConfig
         open={configOpen}
         project={project}
+        defaultLocalPath={workspace?.localPath}
         onClose={() => setConfigOpen(false)}
         onSave={(next) => void handleSaveProject(next)}
       />

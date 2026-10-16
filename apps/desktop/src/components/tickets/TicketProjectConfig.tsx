@@ -15,6 +15,8 @@ function castIncludesBot(cast: string[], bot: BotConfig): boolean {
 type TicketProjectConfigProps = {
   open: boolean;
   project: TicketProject | null;
+  /** 当前工作台选中的工作区路径；项目未配置目录时的默认值。 */
+  defaultLocalPath?: string;
   onClose: () => void;
   onSave: (next: TicketProject) => void;
 };
@@ -22,6 +24,7 @@ type TicketProjectConfigProps = {
 export function TicketProjectConfig({
   open,
   project,
+  defaultLocalPath,
   onClose,
   onSave,
 }: TicketProjectConfigProps) {
@@ -60,7 +63,8 @@ export function TicketProjectConfig({
 
   useEffect(() => {
     if (!project) return;
-    setLocalPath(project.localPath ?? "");
+    // 未配置过目录时默认跟随当前工作区；已配置的保持原值，可手动更换。
+    setLocalPath(project.localPath ?? defaultLocalPath ?? "");
     setEngine(project.defaultEngine);
     setTestBaseUrl(project.testBaseUrl ?? "");
     setTestStartCommand(project.testStartCommand ?? "");
@@ -72,7 +76,7 @@ export function TicketProjectConfig({
       .filter((bot) => castIncludesBot(project.cast, bot))
       .map((bot) => bot.id);
     setCast(selected);
-  }, [project, open, bots]);
+  }, [project, open, defaultLocalPath, bots]);
 
   const [busy, setBusy] = useState(false);
 
@@ -189,7 +193,7 @@ export function TicketProjectConfig({
             </button>
           </div>
           <span className="field-hint muted">
-            优先选择已有工作区；浏览新目录会自动登记为工作区。未配置时不能交给 CEO。
+            默认跟随当前工作区；可改选其他工作区或浏览新目录（自动登记为工作区）。
           </span>
           {pathNotice ? (
             <span className="field-hint" role="status">
