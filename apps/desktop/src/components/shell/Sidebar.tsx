@@ -11,6 +11,7 @@ function topicStatus(
 ): "running" | "needs_you" | "idle" {
   if (hasPending) return "needs_you";
   if (
+    topic.busy ||
     topic.pipelineStage === "developing" ||
     topic.pipelineStage === "testing" ||
     topic.pipelineStage === "reviewing"
@@ -28,6 +29,7 @@ function statusLabel(status: "running" | "needs_you" | "idle"): string {
 
 function previewText(topic: Topic, hasPending: boolean): string {
   if (hasPending) return "需要你确认…";
+  if (topic.busy) return "智能体正在执行…";
   if (topic.pipelineStage === "developing") return "智能体正在开发…";
   if (topic.pipelineStage === "testing") return "正在运行测试…";
   if (topic.pipelineStage === "reviewing") return "正在审查…";
@@ -39,6 +41,7 @@ function previewText(topic: Topic, hasPending: boolean): string {
 function confirmCopy(topic: Topic, hasPending: boolean): string {
   const running =
     hasPending ||
+    topic.busy ||
     topic.pipelineStage === "developing" ||
     topic.pipelineStage === "testing" ||
     topic.pipelineStage === "reviewing";

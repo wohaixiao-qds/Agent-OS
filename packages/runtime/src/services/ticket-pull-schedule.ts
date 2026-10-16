@@ -11,6 +11,9 @@ import type { TicketProviderId } from "../tickets/provider.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
+/** 忙碌跳过后的复查间隔：工单一完成就尽快派下一张。 */
+const BUSY_RECHECK_MS = 5 * 60 * 1000;
+
 const TaskSchema = z.object({
   id: z.string(),
   provider: z.enum(["gitee", "zentao"]).default("gitee"),
@@ -42,6 +45,11 @@ export interface TicketPullPort {
       topicId?: string;
     }>
   >;
+  /** 该项目仍在处理中的已派工单（串行节奏据此跳过本轮）。 */
+  inProgressDispatches(
+    provider: TicketProviderId,
+    projectId: string,
+  ): Promise<Array<{ ident: string; topicId: string }>>;
   dispatchToCeo(input: {
     provider: TicketProviderId;
     projectId: string;
@@ -192,6 +200,16 @@ export class TicketPullScheduleService {
         await this.save();
       }
       task.lastResult = await this.pull(task);
+      // 忙碌跳过时不用干等整个间隔：短间隔轮询，完成即可派下一张。
+      if (
+        reason === "scheduled" &&
+        task.lastResult.includes("本轮跳过") &&
+        task.status === "active"
+      ) {
+        task.nextRunAt = new Date(
+          at.getTime() + BUSY_RECHECK_MS,
+        ).toISOString();
+      }
       task.lastRunAt = at.toISOString();
       task.updatedAt = at.toISOString();
     } catch (error) {
@@ -214,6 +232,16 @@ export class TicketPullScheduleService {
       throw new Error("请先在工单项目配置中填写本地工作目录");
     }
     const todos = await this.tickets.listTodos(task.provider, task.projectId);
+    // 串行节奏：上一张派出的工单还没处理完（话题里有活跃运行）就不派新的，
+    // 等下一轮再看 —— 一张处理完再派下一张，避免同时起多个 CLI 进程。
+    const inProgress = await this.tickets.inProgressDispatches(
+      task.provider,
+      task.projectId,
+    );
+    if (inProgress.length > 0) {
+      const idents = inProgress.map((item) => item.ident).join("、");
+      return `上一张工单仍在处理中（${idents}），本轮跳过；完成后再派下一张`;
+    }
     const matched = todos
       .filter(
         (todo) =>
@@ -221,30 +249,21 @@ export class TicketPullScheduleService {
           matchesPullPriority(todo.priority, task.priority),
       )
       .sort(comparePriorityThenIdent);
-    let handed = 0;
-    const failures: string[] = [];
-    for (const todo of matched) {
-      try {
-        await this.tickets.dispatchToCeo({
-          provider: task.provider,
-          projectId: task.projectId,
-          issueKey: todo.key,
-        });
-        handed += 1;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "派发失败";
-        if (message.includes("未找到已启用的 CEO")) {
-          if (handed === 0) throw new Error(message);
-          failures.push(`${todo.ident}：${message}`);
-          break;
-        }
-        failures.push(`${todo.ident}：${message}`);
-      }
+    const next = matched[0];
+    if (!next) {
+      return `拉到 ${todos.length} 张，暂无符合优先级的新工单`;
     }
-    const summary = `拉到 ${todos.length} 张，新交给 CEO ${handed} 张`;
-    return failures.length === 0
-      ? summary
-      : `${summary}。未交：${failures.join("；")}`;
+    try {
+      await this.tickets.dispatchToCeo({
+        provider: task.provider,
+        projectId: task.projectId,
+        issueKey: next.key,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "派发失败";
+      return `拉到 ${todos.length} 张，派 ${next.ident} 失败：${message}`;
+    }
+    return `拉到 ${todos.length} 张，派出 1 张（${next.ident}）；处理完成后下一轮再派`;
   }
 
   private async require(id: string): Promise<TicketPullTask> {

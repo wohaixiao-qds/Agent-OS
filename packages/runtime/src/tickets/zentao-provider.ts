@@ -47,6 +47,9 @@ const PRIORITY_BY_PRI: Record<number, { label: string; rank: number }> = {
 
 const TODO_TASK_STATUSES = new Set(["wait", "doing"]);
 
+/** listTodos 聚合调用的总时限；单请求另有 15s 超时。 */
+const LIST_TODOS_BUDGET_MS = 45_000;
+
 function priorityOf(pri: number | undefined): { label: string; rank: number } {
   return PRIORITY_BY_PRI[pri ?? 3] ?? PRIORITY_BY_PRI[3]!;
 }
@@ -213,12 +216,17 @@ export class ZentaoTicketProvider implements TicketProvider {
     const config = await resolveZentaoCredentials(this.dataDir);
     const projectIdNumber = Number(project.programId);
 
+    // 总时限：迭代×产品×分页聚合下来可能跑数分钟，把浏览器连接池占死
+    // （每 host 6 条并发），超时就带着已有部分结果返回。
+    const deadline = Date.now() + LIST_TODOS_BUDGET_MS;
+
     const executions = await client
       .listProjectExecutions(projectIdNumber)
       .catch(() => []);
 
     const tasks: TicketSummary[] = [];
     for (const execution of executions) {
+      if (Date.now() > deadline) break;
       const rows = await client
         .listExecutionTasks(execution.id)
         .catch(() => []);
@@ -286,6 +294,7 @@ export class ZentaoTicketProvider implements TicketProvider {
     const bugs: TicketSummary[] = [];
     const CONCURRENCY = 4;
     for (let i = 0; i < bugProducts.length; i += CONCURRENCY) {
+      if (Date.now() > deadline) break;
       const batch = bugProducts.slice(i, i + CONCURRENCY);
       const pages = await Promise.all(
         batch.map(async (product) => {

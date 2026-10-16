@@ -101,6 +101,8 @@ const botRunService = new BotRunService(
   settingsService,
   broadcast,
 );
+// 上个进程遗留的 busy 标记随进程一起失效，启动时清掉
+void botRunService.recover();
 const chatService = new ChatService(
   store,
   workspaceService,

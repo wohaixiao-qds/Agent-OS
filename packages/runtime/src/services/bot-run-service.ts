@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChatMessage, EngineKind } from "@zy-aos/shared";
+import type { ChatMessage, EngineKind, Topic } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { WorkspaceService } from "./workspace-service.js";
 import type { BotService } from "./bot-service.js";
@@ -75,10 +75,15 @@ function isAbortError(error: unknown): boolean {
   return error.name === "AbortError" || /abort/i.test(error.message);
 }
 
-export type BotRunEvent = {
-  type: "message.upsert";
-  message: ChatMessage;
-};
+export type BotRunEvent =
+  | {
+      type: "message.upsert";
+      message: ChatMessage;
+    }
+  | {
+      type: "topic.update";
+      topic: Topic;
+    };
 
 export interface BotRunRequest {
   topicId: string;
@@ -178,8 +183,75 @@ export class BotRunService {
     const controller = this.runControllers.get(topicId);
     controller?.abort();
     this.runControllers.delete(topicId);
+    await this.setTopicBusy(topicId, false);
     const cancelled = await this.cancelStreaming(topicId);
     return { ok: true, aborted: Boolean(controller) || cancelled };
+  }
+
+  /** True while a CLI run is active in the topic (in-process controllers). */
+  isTopicBusy(topicId: string): boolean {
+    return this.runControllers.has(topicId);
+  }
+
+  /**
+   * Mark the topic busy/idle for live status (sidebar 会话列表).
+   * Broadcasts topic.update so open clients re-render the list.
+   */
+  private async setTopicBusy(topicId: string, busy: boolean): Promise<void> {
+    let updated: Topic | undefined;
+    await this.store.transact(async (state) => {
+      const topic = state.topics.find((item) => item.id === topicId);
+      if (topic && topic.busy !== busy) {
+        topic.busy = busy;
+        updated = { ...topic };
+      }
+    });
+    if (updated) {
+      this.emit?.({ type: "topic.update", topic: updated });
+    }
+  }
+
+  /**
+   * Clear state left by a previous process — runs die with the process:
+   * stale topic busy flags and messages stuck in streaming/running.
+   */
+  async recover(): Promise<void> {
+    const clearedTopics: Topic[] = [];
+    const cancelled: ChatMessage[] = [];
+    await this.store.transact(async (state) => {
+      for (const topic of state.topics) {
+        if (topic.busy) {
+          topic.busy = undefined;
+          clearedTopics.push({ ...topic });
+        }
+      }
+      state.messages = state.messages.map((message) => {
+        if (!message.streaming && message.run?.status !== "running") {
+          return message;
+        }
+        const next: ChatMessage = {
+          ...message,
+          streaming: false,
+          content: message.content.trim() ? message.content : "任务已停止。",
+          run: message.run
+            ? {
+                ...message.run,
+                status: "cancelled",
+                current: "已停止",
+                finishedAt: new Date().toISOString(),
+              }
+            : message.run,
+        };
+        cancelled.push(next);
+        return next;
+      });
+    });
+    for (const topic of clearedTopics) {
+      this.emit?.({ type: "topic.update", topic });
+    }
+    for (const message of cancelled) {
+      this.emit?.({ type: "message.upsert", message });
+    }
   }
 
   /** Mark in-flight cards stopped even if the CLI process is already gone. */
@@ -312,6 +384,7 @@ export class BotRunService {
     previous?.abort();
     const controller = new AbortController();
     this.runControllers.set(req.topicId, controller);
+    await this.setTopicBusy(req.topicId, true);
 
     if (req.signal) {
       if (req.signal.aborted) {
@@ -451,6 +524,8 @@ export class BotRunService {
     } finally {
       if (this.runControllers.get(req.topicId) === controller) {
         this.runControllers.delete(req.topicId);
+        // 本轮是最新一次运行且已结束 → 话题空闲（若期间新运行接管则不动）
+        await this.setTopicBusy(req.topicId, false);
       }
       const stopped =
         controller.signal.aborted || this.discarded.has(req.topicId);

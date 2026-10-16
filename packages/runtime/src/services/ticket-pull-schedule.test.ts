@@ -23,6 +23,7 @@ function port(overrides?: Partial<TicketPullPort>): TicketPullPort & {
       { key: "4", ident: "D", priority: "" },
       { key: "5", ident: "E", priority: "紧急", topicId: "topic-1" },
     ],
+    inProgressDispatches: async () => [],
     dispatchToCeo: async (input) => {
       dispatched.push(input.issueKey);
     },
@@ -60,13 +61,80 @@ describe("TicketPullScheduleService", () => {
     const ran = await service.run(task.id);
     expect(ran.status).toBe("draft");
     expect(ran.nextRunAt).toBeUndefined();
-    expect(tickets.dispatched).toEqual(["1", "2"]);
-    expect(ran.lastResult).toBe("拉到 5 张，新交给 CEO 2 张");
+    expect(tickets.dispatched).toEqual(["1"]);
+    expect(ran.lastResult).toBe("拉到 5 张，派出 1 张（A）；处理完成后下一轮再派");
   });
 
-  it("none threshold also hands unprioritized tickets and skips 次要", async () => {
+  it("skips the round while a dispatched ticket is still in progress", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
-    const tickets = port();
+    const tickets = port({
+      inProgressDispatches: async () => [
+        { ident: "A", topicId: "topic-9" },
+      ],
+    });
+    const service = new TicketPullScheduleService(dir, tickets);
+    const task = await service.add({
+      provider: "gitee",
+      projectId: "proj",
+      everyHours: 1,
+      priority: "major",
+    });
+    const ran = await service.run(task.id);
+    expect(tickets.dispatched).toEqual([]);
+    expect(ran.lastResult).toContain("仍在处理中（A）");
+    expect(ran.lastResult).toContain("本轮跳过");
+  });
+
+  it("reschedules a busy skip after 5 minutes instead of the full interval", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
+    const tickets = port({
+      inProgressDispatches: async () => [
+        { ident: "A", topicId: "topic-9" },
+      ],
+    });
+    const service = new TicketPullScheduleService(dir, tickets);
+    const created = await service.add({
+      provider: "gitee",
+      projectId: "proj",
+      everyHours: 1,
+      priority: "major",
+    });
+    const start = new Date("2026-10-13T09:00:00.000Z");
+    await service.start(created.id, start);
+    await service.tick(new Date("2026-10-13T10:00:00.000Z").getTime());
+    const [after] = await service.list();
+    expect(after?.lastResult).toContain("本轮跳过");
+    // 忙碌跳过 → 5 分钟后复查，而不是再等 1 小时
+    expect(after?.nextRunAt).toBe("2026-10-13T10:05:00.000Z");
+    // 复查时若已空闲则照常派发
+    tickets.inProgressDispatches = async () => [];
+    await service.tick(new Date("2026-10-13T10:05:00.000Z").getTime());
+    expect(tickets.dispatched).toEqual(["1"]);
+  });
+
+  it("none threshold dispatches serially: unprioritized included, 次要 skipped", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
+    // 第 1 张派出后标记为已派（带 topicId），下一轮应派第 2 张
+    const dispatchedKeys = new Set<string>();
+    const tickets = port({
+      listTodos: async () => {
+        const all = [
+          { key: "1", ident: "A", priority: "严重" },
+          { key: "2", ident: "B", priority: "主要" },
+          { key: "3", ident: "C", priority: "次要" },
+          { key: "4", ident: "D", priority: "" },
+        ];
+        return all.map((item) =>
+          dispatchedKeys.has(item.key)
+            ? { ...item, topicId: `topic-${item.key}` }
+            : item,
+        );
+      },
+      dispatchToCeo: async (input) => {
+        dispatchedKeys.add(input.issueKey);
+        tickets.dispatched.push(input.issueKey);
+      },
+    });
     const service = new TicketPullScheduleService(dir, tickets);
     const task = await service.add({
       provider: "gitee",
@@ -75,7 +143,10 @@ describe("TicketPullScheduleService", () => {
       priority: "none",
     });
     await service.run(task.id);
-    expect(tickets.dispatched).toEqual(["1", "2", "4"]);
+    expect(tickets.dispatched).toEqual(["1"]);
+    await service.run(task.id);
+    // 次要被跳过，无优先级 D 在 B 之后
+    expect(tickets.dispatched).toEqual(["1", "2"]);
   });
 
   it("starts later, and tick dispatches only when due", async () => {
@@ -99,7 +170,7 @@ describe("TicketPullScheduleService", () => {
     await service.tick(new Date("2026-10-13T10:00:00.000Z").getTime());
     expect(tickets.dispatched).toEqual(["1"]);
     const [after] = await service.list();
-    expect(after?.lastResult).toBe("拉到 5 张，新交给 CEO 1 张");
+    expect(after?.lastResult).toBe("拉到 5 张，派出 1 张（A）；处理完成后下一轮再派");
     expect(after?.nextRunAt).toBe("2026-10-13T11:00:00.000Z");
   });
 

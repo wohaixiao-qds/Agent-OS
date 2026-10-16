@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { TicketIntakeView } from "./ticket-intake";
 
 type LarkCardProps = {
   title: string;
@@ -15,6 +16,64 @@ export function LarkCard({ title, subtitle, children }: LarkCardProps) {
       </header>
       <div className="lark-card-body">{children}</div>
     </section>
+  );
+}
+
+export function TicketIntakeCard({
+  providerLabel,
+  ident,
+  title,
+  url,
+  localPath,
+  engine,
+  cast,
+  summary,
+  note,
+}: TicketIntakeView) {
+  return (
+    <LarkCard title="工单已接入" subtitle={`${providerLabel} · ${ident}`}>
+      {title ? (
+        <p className="lark-card-lead">
+          <strong>{title}</strong>
+        </p>
+      ) : null}
+      {localPath || engine || cast ? (
+        <div className="lark-card-meta ticket-intake-meta">
+          {localPath ? (
+            <div>
+              <span>项目目录</span>
+              <strong className="mono ticket-intake-path">{localPath}</strong>
+            </div>
+          ) : null}
+          {engine ? (
+            <div>
+              <span>引擎</span>
+              <strong>{engine}</strong>
+            </div>
+          ) : null}
+          {cast ? (
+            <div>
+              <span>Cast</span>
+              <strong>{cast}</strong>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {summary ? (
+        <details className="run-details">
+          <summary>描述摘要</summary>
+          <p>{summary}</p>
+        </details>
+      ) : null}
+      {note ? <p className="lark-card-foot">用户补充：{note}</p> : null}
+      {url ? (
+        <p className="lark-card-foot">
+          <a href={url} target="_blank" rel="noreferrer">
+            在{providerLabel}打开 ↗
+          </a>
+        </p>
+      ) : null}
+    </LarkCard>
   );
 }
 

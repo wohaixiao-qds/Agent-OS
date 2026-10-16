@@ -80,6 +80,30 @@ export class TicketService {
     return this.provider(providerId).listProjects();
   }
 
+  /**
+   * 该项目派出的工单中仍在处理的（话题里有活跃 CLI 运行）。
+   * 定时拉单据此实现「完成一张再派下一张」的串行节奏。
+   */
+  async inProgressDispatches(
+    providerId: string,
+    projectId: string,
+  ): Promise<Array<{ ident: string; topicId: string }>> {
+    const all = await this.dispatches.loadAll();
+    const inProgress: Array<{ ident: string; topicId: string }> = [];
+    for (const record of all.values()) {
+      if (record.provider !== providerId || record.projectId !== projectId) {
+        continue;
+      }
+      if (this.botRunService.isTopicBusy(record.topicId)) {
+        inProgress.push({
+          ident: record.ident ?? record.issueKey,
+          topicId: record.topicId,
+        });
+      }
+    }
+    return inProgress;
+  }
+
   updateProject(
     providerId: string,
     projectId: string,
@@ -259,6 +283,13 @@ export class TicketService {
               .map((bot) => `${bot.name}（targetBotId=${bot.id}）`)
               .join("、")
           : project.cast.join("、");
+    // prompt 里的 targetBotId 是 CEO 调 dispatch_task 需要的；聊天系统消息只展示名字。
+    const castDisplay =
+      project.cast.length === 0
+        ? "全团队（未限制 Cast）"
+        : castMembers.length > 0
+          ? castMembers.map((bot) => bot.name).join("、")
+          : project.cast.join("、");
     const castHas = (role: string) =>
       castMembers.some((bot) => bot.role.toLowerCase() === role);
 
@@ -266,6 +297,7 @@ export class TicketService {
       ? detail.description.trim()
       : "（无描述）";
 
+    const summaryText = detail.description.trim();
     const userNote = input.note?.trim() ?? "";
     const noteBlock = userNote
       ? ["", "—— 用户补充 ——", userNote]
@@ -320,15 +352,27 @@ export class TicketService {
           detail.url,
           `项目目录：${project.localPath}`,
           `引擎：${project.defaultEngine}`,
-          `Cast：${castLabel}`,
-          detail.description.trim()
-            ? `描述摘要：${detail.description.trim().slice(0, 240)}`
+          `Cast：${castDisplay}`,
+          summaryText
+            ? `描述摘要：${summaryText.slice(0, 240)}`
             : "描述：（无描述）",
           userNote ? `用户补充：${userNote.slice(0, 240)}` : null,
         ]
           .filter(Boolean)
           .join("\n"),
         createdAt: new Date().toISOString(),
+        ticketIntake: {
+          provider: provider.id,
+          providerLabel: provider.label,
+          ident: detail.ident,
+          title: detail.title,
+          url: detail.url,
+          localPath: project.localPath,
+          engine: project.defaultEngine,
+          cast: castDisplay,
+          summary: summaryText ? summaryText.slice(0, 240) : undefined,
+          note: userNote ? userNote.slice(0, 240) : undefined,
+        },
       });
     });
 

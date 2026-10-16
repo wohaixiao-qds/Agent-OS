@@ -66,6 +66,25 @@ function toDetail(
   };
 }
 
+const PROVIDER_STORAGE_KEY = "zy-aos:tickets:provider";
+
+function readStoredProviderId(): TicketProviderId | null {
+  try {
+    const value = localStorage.getItem(PROVIDER_STORAGE_KEY);
+    return value === "gitee" || value === "zentao" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredProjectId(provider: TicketProviderId): string | null {
+  try {
+    return localStorage.getItem(`zy-aos:tickets:project:${provider}`);
+  } catch {
+    return null;
+  }
+}
+
 export function TicketInbox({ onCollapse }: TicketInboxProps) {
   const {
     workspace,
@@ -75,7 +94,9 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   } = useShell();
   const navigate = useNavigate();
 
-  const [provider, setProvider] = useState<TicketProviderId>("gitee");
+  const [provider, setProvider] = useState<TicketProviderId>(
+    () => readStoredProviderId() ?? "gitee",
+  );
   const [providerStatus, setProviderStatus] = useState<TicketsStatus["providers"]>([]);
   const [projects, setProjects] = useState<TicketProject[]>([]);
   const [projectId, setProjectId] = useState("");
@@ -143,12 +164,31 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
       setSelectedKey(null);
       setNotice(null);
       target = resolved;
+      try {
+        localStorage.setItem(PROVIDER_STORAGE_KEY, resolved);
+      } catch {
+        // 持久化失败不影响使用
+      }
     }
     const list = (await api.listTicketProjects(target)).map(toProject);
     setProjects(list);
-    setProjectId((prev) =>
-      list.some((p) => p.id === prev) ? prev : (list[0]?.id ?? ""),
-    );
+    // 切页回来时优先恢复上次选中的项目（按来源分别记忆）
+    const stored = readStoredProjectId(target);
+    setProjectId((prev) => {
+      const next = list.some((p) => p.id === prev)
+        ? prev
+        : list.some((p) => p.id === stored)
+          ? (stored as string)
+          : (list[0]?.id ?? "");
+      if (next) {
+        try {
+          localStorage.setItem(`zy-aos:tickets:project:${target}`, next);
+        } catch {
+          // 持久化失败不影响使用
+        }
+      }
+      return next;
+    });
   }, []);
 
   const loadTodos = useCallback(
@@ -378,6 +418,11 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                     setProvider(item.id);
                     setSelectedKey(null);
                     setNotice(null);
+                    try {
+                      localStorage.setItem(PROVIDER_STORAGE_KEY, item.id);
+                    } catch {
+                      // 持久化失败不影响使用
+                    }
                   }
                 }}
               >
@@ -409,6 +454,14 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
               setProjectId(e.target.value);
               setSelectedKey(null);
               setNotice(null);
+              try {
+                localStorage.setItem(
+                  `zy-aos:tickets:project:${provider}`,
+                  e.target.value,
+                );
+              } catch {
+                // 持久化失败不影响使用
+              }
             }}
           >
             {projects.length === 0 ? (

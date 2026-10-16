@@ -44,6 +44,7 @@ describe("ChatService", () => {
   let dir: string;
   let store: JsonStore;
   let chat: ChatService;
+  let botService: BotService;
   let workspaceId: string;
   let botId: string;
 
@@ -53,7 +54,7 @@ describe("ChatService", () => {
     await store.save(await emptyState(dir));
 
     const workspaceService = new WorkspaceService(store);
-    const botService = new BotService(store);
+    botService = new BotService(store);
     chat = new ChatService(
       store,
       workspaceService,
@@ -90,12 +91,38 @@ describe("ChatService", () => {
     expect(list[0].id).toBe(topic.id);
   });
 
-  it("stores user message only when no mentionBotId", async () => {
+  it("bare message defaults to the enabled CEO assistant", async () => {
+    const ceo = await botService.create({
+      name: "CEO助理",
+      role: "ceo",
+      defaultEngine: "claude",
+      instructions: "lead",
+      enabled: true,
+    });
     const topic = await chat.createTopic({ workspaceId, title: "T" });
     const messages = await chat.sendMessage(topic.id, { content: "hello" });
-    expect(messages).toHaveLength(1);
-    expect(messages[0].author).toBe("user");
-    expect(messages[0].content).toBe("hello");
+    expect(messages.length).toBeGreaterThanOrEqual(2);
+    const botMsg = messages.find((m) => m.author === "bot");
+    expect(botMsg).toBeTruthy();
+    expect(botMsg!.botId).toBe(ceo.id);
+
+    const settled = await waitForMessages(chat, topic.id, (list) => {
+      const mine = list.find((m) => m.id === botMsg!.id);
+      return Boolean(mine && !mine.streaming);
+    });
+    expect(
+      settled.find((m) => m.id === botMsg!.id)!.botId,
+    ).toBe(ceo.id);
+  });
+
+  it("notes instead of routing when no CEO is enabled for a bare message", async () => {
+    const topic = await chat.createTopic({ workspaceId, title: "T" });
+    const messages = await chat.sendMessage(topic.id, { content: "hello" });
+    expect(messages).toHaveLength(2);
+    expect(messages[0]!.author).toBe("user");
+    expect(messages[0]!.content).toBe("hello");
+    expect(messages[1]!.author).toBe("system");
+    expect(messages[1]!.content).toContain("CEO");
   });
 
   it("adds bot reply when mentionBotId is set", async () => {

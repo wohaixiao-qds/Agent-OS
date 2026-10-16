@@ -162,7 +162,7 @@ export function Composer({
         <textarea
           ref={textareaRef}
           rows={1}
-          placeholder="随心输入，用 @ 提及智能体；@Bot /compact 可整理上下文…"
+          placeholder="随心输入，默认交给 CEO 助理；@ 指定智能体；@Bot /compact 可整理上下文…"
           aria-label="输入框"
           value={text}
           disabled={disabled}

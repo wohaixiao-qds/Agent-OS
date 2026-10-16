@@ -66,15 +66,24 @@ function prioritySummary(priority: TicketPullPriority): string {
   );
 }
 
-/** 会话内只把默认来源初始化为「第一个已配置来源」一次。 */
-let providerInitialized = false;
+const PROVIDER_STORAGE_KEY = "zy-aos:schedules:provider";
+
+function readStoredProvider(): TicketProviderId | null {
+  try {
+    const value = localStorage.getItem(PROVIDER_STORAGE_KEY);
+    return value === "gitee" || value === "zentao" ? value : null;
+  } catch {
+    return null;
+  }
+}
 
 export function SchedulesPage() {
   const navigate = useNavigate();
   const { selectTopic } = useShell();
   const [kind, setKind] = useState<ScheduleKind>("ticket");
-  const [ticketProvider, setTicketProvider] =
-    useState<TicketProviderId>("gitee");
+  const [ticketProvider, setTicketProvider] = useState<TicketProviderId>(
+    () => readStoredProvider() ?? "gitee",
+  );
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string }>>([]);
   const [bots, setBots] = useState<Array<{ id: string; name: string; role: string; enabled: boolean }>>([]);
@@ -167,18 +176,18 @@ export function SchedulesPage() {
     let cancelled = false;
     void (async () => {
       try {
-        // 首次进入默认选中第一个已配置的工单来源
-        if (!providerInitialized) {
-          providerInitialized = true;
-          const status = await api.ticketsStatus();
-          const firstConfigured = status.providers.find((p) => p.configured);
+        // 每次进入都校正：记住的来源未配置时回落到第一个已配置来源
+        const status = await api.ticketsStatus();
+        const configured = status.providers.filter((item) => item.configured);
+        if (!configured.some((item) => item.id === ticketProvider)) {
+          const firstConfigured = configured[0];
           if (firstConfigured && firstConfigured.id !== ticketProvider) {
             setTicketProvider(firstConfigured.id);
             return; // setTicketProvider 会触发本 effect 重跑
           }
         }
       } catch {
-        // status 拉不到时保持默认来源
+        // status 拉不到时保持当前来源
       }
       try {
         await load();
@@ -338,6 +347,11 @@ export function SchedulesPage() {
                     const next = event.target.value as TicketProviderId;
                     setTicketProvider(next);
                     setProjectId("");
+                    try {
+                      localStorage.setItem(PROVIDER_STORAGE_KEY, next);
+                    } catch {
+                      // 无痕模式等场景忽略持久化失败
+                    }
                   }}
                 >
                   <option value="gitee">Gitee</option>

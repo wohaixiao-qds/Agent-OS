@@ -57,6 +57,8 @@ export interface Topic {
   cliSessions?: Record<string, string>;
   pipelineStage: PipelineStage;
   pipelineTaskId?: string;
+  /** True while a bot CLI run is active in this topic (sidebar live status). */
+  busy?: boolean;
 }
 
 export type MessageAuthor = "user" | "bot" | "system";
@@ -95,6 +97,19 @@ export interface ChatMessage {
     expectedOutput?: string;
     project?: string;
     reportToName?: string;
+  };
+  /** Structured ticket intake notice. Present on the system message written by ticket dispatch. */
+  ticketIntake?: {
+    provider: string;
+    providerLabel?: string;
+    ident: string;
+    title?: string;
+    url?: string;
+    localPath?: string;
+    engine?: string;
+    cast?: string;
+    summary?: string;
+    note?: string;
   };
   clarification?: {
     id: string;
@@ -255,6 +270,7 @@ export const TopicSchema = z.object({
   cliSessions: z.record(z.string()).optional(),
   pipelineStage: PipelineStageSchema,
   pipelineTaskId: z.string().optional(),
+  busy: z.boolean().optional(),
 });
 
 export const ChatMessageSchema = z.object({

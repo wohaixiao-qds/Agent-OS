@@ -110,6 +110,80 @@ describe("BotRunService", () => {
     expect(reply?.streaming).toBe(false);
   });
 
+  it("marks the topic busy while a run is live and idle after settle", async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const events: string[] = [];
+    const gated = new BotRunService(
+      store,
+      new WorkspaceService(store),
+      new BotService(store),
+      new SettingsService(store),
+      (event) => {
+        if (event.type === "topic.update") {
+          events.push(`busy=${String(event.topic.busy)}`);
+        }
+      },
+      {
+        async *run() {
+          yield { type: "text_delta" as const, text: "working" };
+          await gate;
+          yield { type: "done" as const, sessionId: "s1" };
+        },
+      },
+    );
+    const started = gated.start({ topicId, botId, prompt: "go" });
+    // 轮询等待 busy=true 落库（transact 是排队的异步写）
+    const deadline = Date.now() + 2000;
+    let busySeen = false;
+    while (Date.now() < deadline && !busySeen) {
+      const snap = await store.load();
+      busySeen = snap.topics.find((t) => t.id === topicId)?.busy === true;
+      if (!busySeen) await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(busySeen).toBe(true);
+    expect(gated.isTopicBusy(topicId)).toBe(true);
+    release?.();
+    await started;
+    // drive 是 fire-and-forget：轮询等运行收尾把 busy 清掉
+    const settleDeadline = Date.now() + 2000;
+    let idleSeen = false;
+    while (Date.now() < settleDeadline && !idleSeen) {
+      const snap = await store.load();
+      idleSeen =
+        (snap.topics.find((t) => t.id === topicId)?.busy ?? false) === false;
+      if (!idleSeen) await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(idleSeen).toBe(true);
+    expect(events).toContain("busy=true");
+    expect(events).toContain("busy=false");
+    // recover 清掉历史遗留的 busy 标记和卡死的流式消息
+    await store.transact(async (s) => {
+      const t = s.topics.find((item) => item.id === topicId);
+      if (t) t.busy = true;
+    });
+    const stuckMsg = await chat
+      .listMessages(topicId)
+      .then((list) => list[list.length - 1]!);
+    await store.transact(async (s) => {
+      const m = s.messages.find((item) => item.id === stuckMsg.id);
+      if (m) {
+        m.streaming = true;
+        m.run = { ...(m.run ?? { status: "running" }), status: "running" };
+      }
+    });
+    await gated.recover();
+    const recovered = await store.load();
+    expect(recovered.topics.find((t) => t.id === topicId)?.busy ?? false).toBe(
+      false,
+    );
+    const swept = recovered.messages.find((m) => m.id === stuckMsg.id);
+    expect(swept?.streaming ?? false).toBe(false);
+    expect(swept?.run?.status).toBe("cancelled");
+  });
+
   it("records tool calls on the running reply", async () => {
     const tracing = new BotRunService(
       store,

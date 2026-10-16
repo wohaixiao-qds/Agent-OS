@@ -208,13 +208,28 @@ export class ChatService {
 
     await this.autoTitleTopic(topic, input.content);
 
-    if (!input.mentionBotId) {
-      return [userMessage];
+    // 不带 @ 的裸消息默认交给 CEO 助理（团队调度者）；没有可用 CEO 时提示。
+    let targetBotId = input.mentionBotId;
+    if (!targetBotId) {
+      const bots = await this.botService.list();
+      const ceo = bots.find(
+        (item) => item.enabled && item.role.toLowerCase() === "ceo",
+      );
+      if (!ceo) {
+        const note = await this.appendMessage({
+          topicId,
+          author: "system",
+          content:
+            "没有已启用的 CEO 助理：请在「智能体」页启用，或用 @ 指定要对话的成员。",
+        });
+        return [userMessage, note];
+      }
+      targetBotId = ceo.id;
     }
 
     const botMessage = await this.botRun.start({
       topicId,
-      botId: input.mentionBotId,
+      botId: targetBotId,
       prompt: input.content,
       origin: "chat",
     });
