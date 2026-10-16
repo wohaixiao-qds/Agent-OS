@@ -575,6 +575,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         loading={detailLoading}
         error={detailError}
         detail={detail}
+        provider={provider}
         note={detail ? (notesByTicketKey[detail.key] ?? "") : ""}
         onNoteChange={(value) => {
           if (!detail) return;

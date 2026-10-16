@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { api } from "../../lib/api";
+import { api, type TicketProviderId } from "../../lib/api";
 import type { TicketDetail } from "./ticket-types";
 import {
   isUsefulImageAlt,
@@ -11,9 +11,15 @@ type TicketDetailDrawerProps = {
   loading: boolean;
   error: string | null;
   detail: TicketDetail | null;
+  provider: TicketProviderId;
   note: string;
   onNoteChange: (value: string) => void;
   onClose: () => void;
+};
+
+const PROVIDER_LABELS: Record<TicketProviderId, string> = {
+  gitee: "Gitee",
+  zentao: "禅道",
 };
 
 function formatWhen(value?: string): string {
@@ -167,6 +173,7 @@ export function TicketDetailDrawer({
   loading,
   error,
   detail,
+  provider,
   note,
   onNoteChange,
   onClose,
@@ -205,7 +212,7 @@ export function TicketDetailDrawer({
         {loading ? (
           <div className="ticket-loading" role="status">
             <span className="ticket-loading-spinner" aria-hidden />
-            <p>正在拉取 Gitee 详情…</p>
+            <p>正在拉取{PROVIDER_LABELS[provider]}详情…</p>
           </div>
         ) : error ? (
           <p className="ticket-empty-hint">{error}</p>
@@ -261,7 +268,7 @@ export function TicketDetailDrawer({
                 id="ticket-hand-note"
                 rows={4}
                 value={note}
-                placeholder="若 Gitee 描述不准，在此补充纠偏或约束…"
+                placeholder={`若${PROVIDER_LABELS[provider]}描述不准，在此补充纠偏或约束…`}
                 onChange={(e) => onNoteChange(e.target.value)}
               />
             </section>
@@ -272,7 +279,7 @@ export function TicketDetailDrawer({
               target="_blank"
               rel="noreferrer"
             >
-              在 Gitee 打开
+              {`在${PROVIDER_LABELS[provider]}打开`}
             </a>
           </div>
         ) : null}
