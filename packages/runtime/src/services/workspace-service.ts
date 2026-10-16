@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { access, readdir } from "node:fs/promises";
+import { access, readdir, stat } from "node:fs/promises";
 import type { Workspace } from "@ml-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import { cloneRepo } from "./git-service.js";
@@ -13,9 +13,16 @@ export type UpdateWorkspaceInput = Partial<
   Pick<Workspace, "name" | "localPath" | "gitUrl">
 >;
 
-function assertLocalPath(localPath: string): void {
-  if (!localPath.trim()) {
+async function assertLocalPath(localPath: string): Promise<void> {
+  const text = localPath.trim();
+  if (!text) {
     throw new Error("localPath is required");
+  }
+  // The path may not exist yet (git clone creates it later); when it exists
+  // it must be a directory, never a file.
+  const info = await stat(text).catch(() => undefined);
+  if (info && !info.isDirectory()) {
+    throw new Error(`localPath is not a directory: ${text}`);
   }
 }
 
@@ -43,7 +50,7 @@ export class WorkspaceService {
   }
 
   async create(input: CreateWorkspaceInput): Promise<Workspace> {
-    assertLocalPath(input.localPath);
+    await assertLocalPath(input.localPath);
 
     const state = await this.store.load();
     const workspace: Workspace = {
@@ -66,7 +73,7 @@ export class WorkspaceService {
 
     const current = state.workspaces[index];
     if (patch.localPath !== undefined) {
-      assertLocalPath(patch.localPath);
+      await assertLocalPath(patch.localPath);
     }
 
     const localPathChanged =

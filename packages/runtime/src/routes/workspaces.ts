@@ -3,8 +3,8 @@ import { readJsonBody, sendError, sendJson } from "../http/json.js";
 import type { WorkspaceService } from "../services/workspace-service.js";
 
 function clientError(message: string): boolean {
-  return (
-    /required|not found|no gitUrl|not empty/i.test(message)
+  return /required|not found|no gitUrl|not empty|not a directory/i.test(
+    message,
   );
 }
 

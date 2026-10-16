@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { JsonStore } from "../store/json-store.js";
@@ -37,6 +37,34 @@ describe("WorkspaceService", () => {
     await expect(
       svc.create({ name: "x", localPath: "" }),
     ).rejects.toThrow(/localPath/);
+  });
+
+  it("rejects localPath pointing at an existing file", async () => {
+    const filePath = join(dir, "not-a-dir.txt");
+    await writeFile(filePath, "hello\n");
+    const svc = new WorkspaceService(store);
+    await expect(
+      svc.create({ name: "x", localPath: filePath }),
+    ).rejects.toThrow(/not a directory/);
+  });
+
+  it("allows localPath that does not exist yet (clone target)", async () => {
+    const svc = new WorkspaceService(store);
+    const ws = await svc.create({
+      name: "clone-me",
+      localPath: join(dir, "future-clone-target"),
+    });
+    expect(ws.localPath).toContain("future-clone-target");
+  });
+
+  it("update rejects changing localPath to a file", async () => {
+    const filePath = join(dir, "afile.txt");
+    await writeFile(filePath, "hello\n");
+    const svc = new WorkspaceService(store);
+    const ws = await svc.create({ name: "x", localPath: dir });
+    await expect(
+      svc.update(ws.id, { localPath: filePath }),
+    ).rejects.toThrow(/not a directory/);
   });
 
   it("clears topic cli sessions when localPath changes", async () => {
