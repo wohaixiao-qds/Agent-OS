@@ -53,7 +53,10 @@ export interface TicketDetail extends TicketSummary {
   authorName: string;
   planStartedAt?: string;
   deadline?: string;
+  /** 原始图片地址（派发下载、浏览器打开原图用）。 */
   imageUrls: string[];
+  /** 展示用图片地址（需鉴权的来源走本地代理路由）。与 imageUrls 一一对应。 */
+  imageSrcs?: string[];
   /** Gitee issue-type states need it; ZenTao ignores. */
   issueTypeId?: number;
 }
@@ -99,4 +102,6 @@ export interface TicketProvider {
     ident: string;
     urls: string[];
   }): Promise<DownloadedImage[]>;
+  /** 按原始 URL 取附件内容（鉴权来源的图片显示代理）。可不实现。 */
+  fetchAttachment?(url: string): Promise<{ bytes: Buffer; mime?: string }>;
 }

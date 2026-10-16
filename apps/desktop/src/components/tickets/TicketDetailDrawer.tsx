@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { api } from "../../lib/api";
 import type { TicketDetail } from "./ticket-types";
 import {
   isUsefulImageAlt,
@@ -81,13 +82,27 @@ function collectImageUrls(description: string, imageUrls: string[]): string[] {
   return [...new Set([...fromDesc, ...imageUrls])];
 }
 
+/** 展示地址：代理路径指向本地 runtime；否则用原始 URL。 */
+function resolveImageSrc(
+  url: string,
+  imageUrls: string[],
+  imageSrcs?: string[],
+): string {
+  const index = imageUrls.indexOf(url);
+  const proxied = index >= 0 ? imageSrcs?.[index] : undefined;
+  const target = proxied ?? url;
+  return target.startsWith("/") ? `${api.baseUrl}${target}` : target;
+}
+
 function DescriptionBody({
   description,
   imageUrls,
+  imageSrcs,
   onOpenImage,
 }: {
   description: string;
   imageUrls: string[];
+  imageSrcs?: string[];
   onOpenImage: (url: string) => void;
 }): ReactNode {
   const parts = parseDescription(description);
@@ -115,7 +130,11 @@ function DescriptionBody({
               onClick={() => onOpenImage(part.url)}
               title="点击放大"
             >
-              <img src={part.url} alt={part.alt || "附图"} loading="lazy" />
+              <img
+                src={resolveImageSrc(part.url, imageUrls, imageSrcs)}
+                alt={part.alt || "附图"}
+                loading="lazy"
+              />
             </button>
             {isUsefulImageAlt(part.alt) ? (
               <figcaption>{part.alt}</figcaption>
@@ -131,7 +150,11 @@ function DescriptionBody({
             onClick={() => onOpenImage(url)}
             title="点击放大"
           >
-            <img src={url} alt="附图" loading="lazy" />
+            <img
+              src={resolveImageSrc(url, imageUrls, imageSrcs)}
+              alt="附图"
+              loading="lazy"
+            />
           </button>
         </figure>
       ))}
@@ -222,6 +245,7 @@ export function TicketDetailDrawer({
               <DescriptionBody
                 description={detail.description}
                 imageUrls={detail.imageUrls}
+                imageSrcs={detail.imageSrcs}
                 onOpenImage={(url) => {
                   const idx = gallery.indexOf(url);
                   setLightboxIndex(idx >= 0 ? idx : 0);

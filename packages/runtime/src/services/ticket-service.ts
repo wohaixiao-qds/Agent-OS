@@ -119,6 +119,18 @@ export class TicketService {
     return this.provider(providerId).getDetail(projectId, issueKey);
   }
 
+  /** 鉴权来源的附件代理（工单详情内图片显示用）。 */
+  async fetchAttachment(
+    providerId: string,
+    url: string,
+  ): Promise<{ bytes: Buffer; mime?: string }> {
+    const provider = this.provider(providerId);
+    if (!provider.fetchAttachment) {
+      throw new Error(`${provider.label} 附件无需代理，请直接访问原地址`);
+    }
+    return provider.fetchAttachment(url);
+  }
+
   async listIssueStates(
     providerId: string,
     projectId: string,

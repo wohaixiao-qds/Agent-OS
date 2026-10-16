@@ -66,6 +66,19 @@ function parseIssueKey(
   };
 }
 
+/** 展示地址：能解析出附件 id 的走本地代理路由，其余保持原 URL。 */
+function imageSrcsFor(
+  projectId: string,
+  issueKey: string,
+  urls: string[],
+): string[] {
+  return urls.map((url) =>
+    fileIdFromUrl(url) !== undefined
+      ? `/api/tickets/zentao/attachment?projectId=${encodeURIComponent(projectId)}&issueKey=${encodeURIComponent(issueKey)}&url=${encodeURIComponent(url)}`
+      : url,
+  );
+}
+
 /** Pull <img src>/markdown image targets out of a ZenTao description. */
 export function extractZentaoImageUrls(
   description: string | undefined,
@@ -101,6 +114,20 @@ export function extractZentaoImageUrls(
     }
   }
   return urls;
+}
+
+/** HTML 描述转可读纯文本：块级标签换行、行内标签剔除、实体解码。 */
+export function zentaoHtmlToText(html: string): string {
+  const withBreaks = html
+    .replace(/<br\s*\/?>/giu, "\n")
+    .replace(/<\/(p|div|li|tr|h[1-6]|blockquote|pre)>/giu, "\n")
+    .replace(/<li[^>]*>/giu, "• ")
+    // 图片不内嵌展示，由 imageUrls 图集统一渲染
+    .replace(/<img\b[^>]*>/giu, "");
+  return decodeAttr(withBreaks.replace(/<[^>]+>/gu, ""))
+    .replace(/\u00a0/gu, " ")
+    .replace(/\n{3,}/gu, "\n\n")
+    .trim();
 }
 
 function decodeAttr(value: string): string {
@@ -302,22 +329,26 @@ export class ZentaoTicketProvider implements TicketProvider {
 
     if (kind === "bug") {
       const bug = await client.getBug(id);
+      const imageUrls = extractZentaoImageUrls(bug.steps, config.baseUrl);
       return {
         ...bugSummary(bug, project.programId, config.baseUrl, ""),
-        description: bug.steps?.trim() ?? "",
+        description: zentaoHtmlToText(bug.steps ?? ""),
         authorName: zentaoUserAccount(bug.openedBy) ?? "",
         deadline: bug.deadline,
-        imageUrls: extractZentaoImageUrls(bug.steps, config.baseUrl),
+        imageUrls,
+        imageSrcs: imageSrcsFor(projectId, issueKey, imageUrls),
       };
     }
 
     const task = await client.getTask(id);
+    const imageUrls = extractZentaoImageUrls(task.desc, config.baseUrl);
     return {
       ...taskSummary(task, project.programId, config.baseUrl, ""),
-      description: task.desc?.trim() ?? "",
+      description: zentaoHtmlToText(task.desc ?? ""),
       authorName: zentaoUserAccount(task.openedBy) ?? "",
       deadline: task.deadline,
-      imageUrls: extractZentaoImageUrls(task.desc, config.baseUrl),
+      imageUrls,
+      imageSrcs: imageSrcsFor(projectId, issueKey, imageUrls),
     };
   }
 
@@ -358,6 +389,18 @@ export class ZentaoTicketProvider implements TicketProvider {
       await client.activateBug(id);
     }
     return { stateId: target.id, stateTitle: target.title };
+  }
+
+  /** 图片显示代理：按原始 URL 里的附件 id 鉴权下载。 */
+  async fetchAttachment(
+    url: string,
+  ): Promise<{ bytes: Buffer; mime?: string }> {
+    const client = await this.createClient(this.dataDir);
+    const fileId = fileIdFromUrl(url);
+    if (fileId === undefined) {
+      throw new Error("该附件链接不带禅道文件 id，无法代理下载");
+    }
+    return client.downloadFile(fileId);
   }
 
   async downloadImages(input: {

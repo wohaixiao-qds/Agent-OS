@@ -257,11 +257,14 @@ export class ZentaoClient {
         response.status,
       );
     }
-    const array = await response.arrayBuffer();
-    return {
-      bytes: Buffer.from(array),
-      mime: response.headers.get("content-type") ?? undefined,
-    };
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const declared = response.headers.get("content-type")?.split(";", 1)[0];
+    const mime =
+      declared && declared.startsWith("image/")
+        ? declared
+        // ZenTao /files 常返回 octet-stream，按字节魔数兜底识别
+        : detectImageMime(bytes) ?? declared ?? undefined;
+    return { bytes, mime };
   }
 
   private async paged<T>(
@@ -465,6 +468,26 @@ export class ZentaoClient {
       body: comment ? { comment } : {},
     });
   }
+}
+
+function detectImageMime(bytes: Buffer): string | undefined {
+  if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (bytes.length >= 3 && bytes.toString("ascii", 0, 3).match(/^GIF8[79]a$/)) {
+    return "image/gif";
+  }
+  const head = bytes.toString("ascii", 0, 12);
+  if (head.startsWith("RIFF") && head.slice(8, 12) === "WEBP") {
+    return "image/webp";
+  }
+  if (bytes.length >= 2 && head.startsWith("BM")) {
+    return "image/bmp";
+  }
+  return undefined;
 }
 
 function mapProduct(row: Record<string, unknown>): ZentaoProduct | undefined {

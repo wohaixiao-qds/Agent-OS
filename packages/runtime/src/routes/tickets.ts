@@ -144,6 +144,32 @@ export function registerTicketRoutes(
     },
   );
 
+  router.get(
+    "/api/tickets/:provider/attachment",
+    async (req, res, params) => {
+    try {
+      const url = new URL(req.url ?? "/", "http://127.0.0.1");
+      const target = url.searchParams.get("url") ?? "";
+      if (!target.trim()) {
+        sendError(res, 400, "url 必填");
+        return;
+      }
+      const file = await service.fetchAttachment(
+        providerParam(params.provider),
+        target,
+      );
+      res.writeHead(200, {
+        "content-type": file.mime ?? "application/octet-stream",
+        "cache-control": "private, max-age=300",
+      });
+      res.end(file.bytes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "附件获取失败";
+      sendError(res, statusFor(message), message);
+    }
+    },
+  );
+
   router.post("/api/tickets/dispatch", async (req, res) => {
     try {
       const body = await readJsonBody<{

@@ -85,14 +85,19 @@ export class GiteeTicketProvider implements TicketProvider {
     return issues.map((issue) => ({
       ...issue,
       key: String(issue.id),
-      programId: issue.programId,
+      sprintId: issue.sprintId === undefined ? undefined : String(issue.sprintId),
     }));
   }
 
   async getDetail(projectId: string, issueKey: string): Promise<TicketDetail> {
     await this.requireProject(projectId);
     const detail = await getIssueDetail(parseNumericIssueKey(issueKey));
-    return { ...detail, key: String(detail.id) };
+    return {
+      ...detail,
+      key: String(detail.id),
+      sprintId:
+        detail.sprintId === undefined ? undefined : String(detail.sprintId),
+    };
   }
 
   async listStates(

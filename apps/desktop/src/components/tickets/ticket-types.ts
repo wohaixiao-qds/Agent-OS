@@ -56,6 +56,8 @@ export interface TicketDetail extends TicketItem {
   planStartedAt?: string;
   deadline?: string;
   imageUrls: string[];
+  /** 展示用图片地址（鉴权来源走本地代理），与 imageUrls 一一对应。 */
+  imageSrcs?: string[];
 }
 
 export interface TicketSprintGroup {

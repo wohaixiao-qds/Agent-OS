@@ -573,6 +573,7 @@ export const api = {
     planStartedAt?: string;
     deadline?: string;
     imageUrls: string[];
+    imageSrcs?: string[];
     topicId?: string;
     pipelineStage?: string;
   }> {

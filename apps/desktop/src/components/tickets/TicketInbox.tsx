@@ -62,6 +62,7 @@ function toDetail(
     planStartedAt: row.planStartedAt,
     deadline: row.deadline,
     imageUrls: row.imageUrls ?? [],
+    imageSrcs: row.imageSrcs,
   };
 }
 
