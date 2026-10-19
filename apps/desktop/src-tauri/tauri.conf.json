@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "ZY AOS",
+  "productName": "ZYAOS",
   "version": "0.1.2",
   "identifier": "com.wohaixiao.agent-os",
   "build": {
