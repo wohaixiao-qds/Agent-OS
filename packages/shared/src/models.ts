@@ -59,6 +59,8 @@ export interface Topic {
   pipelineTaskId?: string;
   /** True while a bot CLI run is active in this topic (sidebar live status). */
   busy?: boolean;
+  /** Last message time (computed on list; drives sidebar unread/idle display). */
+  lastMessageAt?: string;
 }
 
 export type MessageAuthor = "user" | "bot" | "system";
@@ -271,6 +273,7 @@ export const TopicSchema = z.object({
   pipelineStage: PipelineStageSchema,
   pipelineTaskId: z.string().optional(),
   busy: z.boolean().optional(),
+  lastMessageAt: z.string().optional(),
 });
 
 export const ChatMessageSchema = z.object({

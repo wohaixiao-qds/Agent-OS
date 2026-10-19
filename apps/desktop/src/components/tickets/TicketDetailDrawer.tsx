@@ -287,7 +287,10 @@ export function TicketDetailDrawer({
 
       {lightboxIndex != null && gallery.length > 0 ? (
         <TicketImageLightbox
-          urls={gallery}
+          urls={gallery.map((url) =>
+            resolveImageSrc(url, detail?.imageUrls ?? [], detail?.imageSrcs),
+          )}
+          externalUrls={gallery}
           index={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onIndexChange={setLightboxIndex}

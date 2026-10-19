@@ -190,7 +190,10 @@ export function registerTicketRoutes(
         workspaceId: body.workspaceId,
         note: body.note,
       });
-      sendJson(res, 201, result);
+      // done 是给定时拉单串行等待用的内部 Promise，不进 HTTP 响应
+      const { done, ...rest } = result;
+      void done;
+      sendJson(res, 201, rest);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bad request";
       sendError(res, statusFor(message), message);

@@ -187,7 +187,8 @@ describe("TicketService board + state APIs", () => {
       projectId: "818309",
       issueKey: "42",
     });
-
+    // 派单即时返回话题；看板/记账在后台 done 里完成
+    await result.done;
     expect(result.topicId).toBeTruthy();
     const id = boardTaskIdForGitee("818309", "TEST-42");
     const row = await taskBoard.findByGiteeIssueId(42);
@@ -199,6 +200,70 @@ describe("TicketService board + state APIs", () => {
     expect(row?.stage).toBe("idle");
     expect(row?.gitee?.issueTypeId).toBe(7);
     expect(row?.title).toContain("TEST-42");
+  });
+
+  it("listTodos treats dispatch records with deleted topics as un-dispatched", async () => {
+    const { TicketDispatchStore } = await import("./ticket-dispatches.js");
+    const dispatches = new TicketDispatchStore(dir);
+    // 死记录：话题已被删除
+    await dispatches.save({
+      provider: "gitee",
+      issueId: 42,
+      issueKey: "42",
+      ident: "TEST-42",
+      projectId: "818309",
+      topicId: "ghost-topic",
+      cast: [],
+      localPath: dir,
+      engine: "claude",
+      at: new Date().toISOString(),
+    });
+    // 活记录：话题真实存在（直接写入 store 即可，listTodos 只按 id 匹配）
+    const liveId = "live-topic";
+    await store.transact(async (s) => {
+      s.topics.push({
+        id: liveId,
+        workspaceId: "ws-1",
+        title: "live",
+        createdAt: new Date().toISOString(),
+        pipelineStage: "idle",
+      });
+    });
+    await dispatches.save({
+      provider: "gitee",
+      issueId: 43,
+      issueKey: "43",
+      ident: "TEST-43",
+      projectId: "818309",
+      topicId: liveId,
+      cast: [],
+      localPath: dir,
+      engine: "claude",
+      at: new Date().toISOString(),
+    });
+
+    const todo = (id: number, ident: string) => ({
+      id,
+      ident,
+      title: `issue ${ident}`,
+      stateTitle: "进行中",
+      sprintTitle: "",
+      programId: "818309",
+      url: "https://gitee.com/i",
+      priority: "主要",
+      priorityRank: 20,
+    });
+    const { listMyTodoIssues } = (await import("../gitee/client.js")) as {
+      listMyTodoIssues: ReturnType<typeof vi.fn>;
+    };
+    listMyTodoIssues.mockResolvedValue([todo(42, "TEST-42"), todo(43, "TEST-43")]);
+
+    const list = await ticketService.listTodos("gitee", "818309");
+    const dead = list.find((item) => item.ident === "TEST-42");
+    const alive = list.find((item) => item.ident === "TEST-43");
+    // 话题没了 → 不算已派发，定时任务可重新接手
+    expect(dead?.topicId).toBeUndefined();
+    expect(alive?.topicId).toBe(liveId);
   });
 
   it("listIssueStates requires issueTypeId then lists type states", async () => {

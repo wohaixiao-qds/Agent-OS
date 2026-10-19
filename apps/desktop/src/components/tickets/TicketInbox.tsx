@@ -290,15 +290,17 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         workspaceId: workspace?.id,
         note,
       });
+      // 先刷新列表/对齐工作区（切换工作区会重置选择），最后激活派单话题
       await refreshAll();
-      await loadTodos(provider, project.id, includeAll);
-      selectTopic(result.topicId);
       const workspaces = await api.listWorkspaces();
       const matched = workspaces.find((w) =>
         w.localPath.replace(/\\/g, "/").toLowerCase() ===
         project.localPath!.replace(/\\/g, "/").toLowerCase(),
       );
       if (matched) setWorkspaceId(matched.id);
+      selectTopic(result.topicId);
+      // 待办重拉较慢（内网聚合），放后台不挡激活
+      void loadTodos(provider, project.id, includeAll).catch(() => {});
       setNotesByTicketKey((prev) => {
         const next = { ...prev };
         delete next[ticket.key];

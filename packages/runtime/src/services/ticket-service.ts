@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { BotConfig, Topic, Workspace } from "@zy-aos/shared";
 import type { JsonStore } from "../store/json-store.js";
 import type { BotRunService } from "./bot-run-service.js";
 import type { BotService } from "./bot-service.js";
@@ -128,7 +129,9 @@ export class TicketService {
           : undefined;
         return {
           ...todo,
-          topicId: record?.topicId,
+          // 话题已删除（清理/中断）的派单记录不算「已派发」，
+          // 定时任务和收件箱把它当新工单重新接手。
+          topicId: topic?.id,
           pipelineStage: topic?.pipelineStage,
         };
       }),
@@ -226,7 +229,7 @@ export class TicketService {
     issueKey: string;
     workspaceId?: string;
     note?: string;
-  }): Promise<{ topicId: string; botId: string }> {
+  }): Promise<{ topicId: string; botId: string; done: Promise<void> }> {
     const provider = this.provider(input.provider);
     const project = await provider.getProject(input.projectId);
     if (!project) {
@@ -254,16 +257,56 @@ export class TicketService {
     );
     if (!ceo) throw new Error("未找到已启用的 CEO 助理");
 
-    const downloads = await provider.downloadImages({
-      projectId: input.projectId,
-      localPath: project.localPath,
-      ident: detail.ident,
-      urls: detail.imageUrls,
-    });
-
     const topic = await this.chatService.createTopic({
       workspaceId: workspace.id,
       title: `${detail.ident} ${detail.title}`.slice(0, 120),
+    });
+
+    // 话题建好就返回，前端立刻切换激活；附图下载等重活后台继续
+    // （内网下载可能要几十秒，同步等会把激活和定时拉单都拖住）。
+    const done = this.finishDispatch({
+      provider,
+      project,
+      detail,
+      workspace,
+      topic,
+      ceo,
+      bots,
+      note: input.note,
+    }).catch(async (error) => {
+      const message = error instanceof Error ? error.message : "派发失败";
+      await this.store
+        .transact((state) => {
+          state.messages.push({
+            id: randomUUID(),
+            topicId: topic.id,
+            author: "system",
+            content: `[dispatch] 派发失败：${message}`,
+            createdAt: new Date().toISOString(),
+          });
+        })
+        .catch(() => {});
+    });
+
+    return { topicId: topic.id, botId: ceo.id, done };
+  }
+
+  private async finishDispatch(input: {
+    provider: TicketProvider;
+    project: TicketProject;
+    detail: TicketDetail;
+    workspace: Workspace;
+    topic: Topic;
+    ceo: BotConfig;
+    bots: BotConfig[];
+    note?: string;
+  }): Promise<void> {
+    const { provider, project, detail, topic, ceo, bots } = input;
+    const downloads = await provider.downloadImages({
+      projectId: project.id,
+      localPath: project.localPath,
+      ident: detail.ident,
+      urls: detail.imageUrls,
     });
 
     const castMembers = bots.filter(
@@ -421,8 +464,6 @@ export class TicketService {
       botId: ceo.id,
       stage: topic.pipelineStage ?? "idle",
     });
-
-    return { topicId: topic.id, botId: ceo.id };
   }
 
   private async resolveWorkspace(

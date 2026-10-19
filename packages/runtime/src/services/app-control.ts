@@ -199,7 +199,9 @@ export class AppControl {
     if (dispatch) {
       if (info.bot.role.toLowerCase() !== "ceo") {
         await this.note(info.req.topicId, "只有 CEO 助理可以调用 dispatch_task。");
-        return true;
+        // 返回 false 让 team-handoff 继续走成员交回流程，
+        // 拒绝笔记不该吞掉「结果交回 CEO」的自动链路。
+        return false;
       }
       await this.dispatchTo(info.req.topicId, info.bot, dispatch);
       return true;

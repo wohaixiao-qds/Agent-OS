@@ -27,7 +27,20 @@ export class TeamHandoff {
   async handle(info: BotRunSettled): Promise<void> {
     if (this.botRun.isDiscarded(info.req.topicId)) return;
     if (await this.control?.handle(info)) return;
-    if (!info.result.ok || info.result.clarificationPending) return;
+    if (!info.result.ok || info.result.clarificationPending) {
+      // 协作链里的运行被中止/失败时不再静默断链：明确告知如何接续。
+      const inChain =
+        info.req.origin === "handoff" ||
+        info.req.origin === "resume" ||
+        (await this.topicCast(info.req.topicId)) !== null;
+      if (!info.result.ok && inChain && info.bot.role.toLowerCase() !== "ceo") {
+        await this.note(
+          info.req.topicId,
+          `${info.bot.name} 的运行被中止，协作链路已暂停。需要继续时直接发消息，CEO 助理会接手调度。`,
+        );
+      }
+      return;
+    }
 
     const role = info.bot.role.toLowerCase();
     const content = await this.messageContent(info.result.messageId);
@@ -81,8 +94,11 @@ export class TeamHandoff {
     }
 
     // Workers (and product after non-gated work): report back to CEO.
+    // origin=handoff（CEO 派发）必交回；工单/协作话题里用户直接 @ 成员的
+    // 聊天轮次（origin=chat）也交回，否则结论会滞留在成员手里断链。
+    const dispatched = await this.topicCast(info.req.topicId);
     if (
-      info.req.origin === "handoff" &&
+      (info.req.origin === "handoff" || dispatched !== null) &&
       (role === "developer" ||
         role === "tester" ||
         role === "reviewer" ||

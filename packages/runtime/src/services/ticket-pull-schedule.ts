@@ -254,11 +254,13 @@ export class TicketPullScheduleService {
       return `拉到 ${todos.length} 张，暂无符合优先级的新工单`;
     }
     try {
-      await this.tickets.dispatchToCeo({
+      const result = (await this.tickets.dispatchToCeo({
         provider: task.provider,
         projectId: task.projectId,
         issueKey: next.key,
-      });
+      })) as { done?: Promise<void> } | undefined;
+      // 等后台收尾（附图下载、起运行）完成再结束本轮，串行判定才准确
+      await result?.done;
     } catch (error) {
       const message = error instanceof Error ? error.message : "派发失败";
       return `拉到 ${todos.length} 张，派 ${next.ident} 失败：${message}`;

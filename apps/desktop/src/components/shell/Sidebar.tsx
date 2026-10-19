@@ -27,17 +27,6 @@ function statusLabel(status: "running" | "needs_you" | "idle"): string {
   return "空闲";
 }
 
-function previewText(topic: Topic, hasPending: boolean): string {
-  if (hasPending) return "需要你确认…";
-  if (topic.busy) return "智能体正在执行…";
-  if (topic.pipelineStage === "developing") return "智能体正在开发…";
-  if (topic.pipelineStage === "testing") return "正在运行测试…";
-  if (topic.pipelineStage === "reviewing") return "正在审查…";
-  if (topic.pipelineStage === "completed") return "流水线已完成。";
-  if (topic.pipelineStage === "blocked") return "流水线已阻塞。";
-  return "等待输入。";
-}
-
 function confirmCopy(topic: Topic, hasPending: boolean): string {
   const running =
     hasPending ||
@@ -51,16 +40,49 @@ function confirmCopy(topic: Topic, hasPending: boolean): string {
   return "将删除这个话题的消息。不能撤销。";
 }
 
+/** 相对时间：刚看过没多久用「刚刚」，久了落到日期。 */
+function relativeTime(iso?: string, now = Date.now()): string {
+  if (!iso) return "";
+  const ms = now - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return "";
+  if (ms < 60_000) return "刚刚";
+  if (ms < 60 * 60_000) return `${Math.floor(ms / 60_000)}分钟前`;
+  if (ms < 24 * 60 * 60_000) return `${Math.floor(ms / 3_600_000)}小时前`;
+  if (ms < 7 * 24 * 60 * 60_000) return `${Math.floor(ms / 86_400_000)}天前`;
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+const READ_AT_PREFIX = "zy-aos:read:";
+
+function readAtOf(topicId: string): number {
+  try {
+    return Number(localStorage.getItem(READ_AT_PREFIX + topicId) ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+function markRead(topicId: string): void {
+  try {
+    localStorage.setItem(READ_AT_PREFIX + topicId, String(Date.now()));
+  } catch {
+    // 持久化失败不影响使用
+  }
+}
+
 function TopicListItem({
   topic,
   active,
   hasPending,
+  unread,
   onSelect,
   onDelete,
 }: {
   topic: Topic;
   active: boolean;
   hasPending: boolean;
+  unread: boolean;
   onSelect: () => void;
   onDelete: () => Promise<boolean>;
 }) {
@@ -82,16 +104,27 @@ function TopicListItem({
   return (
     <li className={confirming ? "topic-item confirming" : "topic-item"}>
       <div className={`topic-row ${active ? "active" : ""}`}>
-        <button type="button" className="topic-select" onClick={onSelect}>
+        <button
+          type="button"
+          className="topic-select"
+          onClick={() => {
+            if (!active) markRead(topic.id);
+            onSelect();
+          }}
+        >
           <div className="topic-row-head">
-            <span className="topic-title">{topic.title}</span>
-            <span className={`status-chip status-${status}`}>
-              {statusLabel(status)}
-            </span>
+            {unread ? <span className="topic-unread" aria-label="有未读" /> : null}
+            {status === "running" ? (
+              <span className="topic-spinner" aria-label="进行中" title="智能体正在执行" />
+            ) : null}
+            <span className={`topic-title ${unread ? "is-unread" : ""}`}>{topic.title}</span>
+            {status === "needs_you" ? (
+              <span className={`status-chip status-${status}`}>
+                {statusLabel(status)}
+              </span>
+            ) : null}
+            <span className="topic-time">{relativeTime(topic.lastMessageAt)}</span>
           </div>
-          <p className="topic-preview">
-            {previewText(topic, hasPending)}
-          </p>
         </button>
         <button
           type="button"
@@ -154,6 +187,12 @@ export function Sidebar() {
   const [filter, setFilter] = useState("");
   const [creating, setCreating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // 每分钟重渲染一次让「X分钟前」走表
+  const [, setTimeTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setTimeTick((n) => n + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -318,6 +357,14 @@ export function Sidebar() {
             topic={topic}
             active={selectedTopicId === topic.id}
             hasPending={topicPendingIds.has(topic.id)}
+            unread={
+              topic.id !== selectedTopicId &&
+              Boolean(
+                topic.lastMessageAt &&
+                  new Date(topic.lastMessageAt).getTime() >
+                    readAtOf(topic.id),
+              )
+            }
             onSelect={() => selectTopic(topic.id)}
             onDelete={() => deleteTopic(topic.id)}
           />

@@ -437,10 +437,11 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   text-align: left;
   border: none;
   border-radius: 0;
-  padding: 12px 4px 12px 14px;
+  padding: 7px 4px 7px 14px;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -530,12 +531,12 @@
 .topic-row-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
 .topic-title {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-weight: 600;
   overflow: hidden;
@@ -547,13 +548,40 @@
   font-weight: 500;
 }
 
-.topic-preview {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.topic-unread {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.topic-spinner {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  animation: topic-spin 0.8s linear infinite;
+}
+
+@keyframes topic-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.topic-row:not(.active) .topic-title.is-unread {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.topic-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-faint);
 }
 
 .status-chip {

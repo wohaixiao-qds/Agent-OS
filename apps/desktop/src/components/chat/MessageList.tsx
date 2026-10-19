@@ -103,6 +103,8 @@ export function MessageList({
   // observer effect 必须等内层真正挂载后才运行（ref 变化不触发 effect）。
   const [contentEl, setContentEl] = useState<HTMLDivElement | null>(null);
   const stickToBottomRef = useRef(true);
+  // 最近一次程序贴底的时间：紧随其后的 scroll 事件不参与用户意图判定
+  const lastPinAtRef = useRef(0);
   const [showJump, setShowJump] = useState(false);
   const prevTopicRef = useRef<string | null>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -118,6 +120,15 @@ export function MessageList({
     if (showJump) setShowJump(false);
   }
 
+  function pinToBottom() {
+    const el = timelineRef.current;
+    if (!el) return;
+    // 流式突发下，贴底滚动的事件异步派发时距离可能又变大；
+    // 打上时间标记，handleScroll 据此跳过自家滚动的误判
+    lastPinAtRef.current = Date.now();
+    el.scrollTop = el.scrollHeight;
+  }
+
   useEffect(() => {
     const el = timelineRef.current;
     if (!el) return;
@@ -131,12 +142,10 @@ export function MessageList({
     }
     if (lastMessage) lastMessageIdRef.current = lastMessage.id;
     if (stickToBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
+      pinToBottom();
       // 图片/代码块在本次提交后才撑高布局：下一帧再钉一次
       requestAnimationFrame(() => {
-        if (stickToBottomRef.current && el.isConnected) {
-          el.scrollTop = el.scrollHeight;
-        }
+        if (stickToBottomRef.current && el.isConnected) pinToBottom();
       });
     }
   }, [messages, lastMessage]);
@@ -147,7 +156,7 @@ export function MessageList({
     const el = timelineRef.current;
     if (!el || !contentEl || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
-      if (stickToBottomRef.current) el.scrollTop = el.scrollHeight;
+      if (stickToBottomRef.current) pinToBottom();
     });
     observer.observe(contentEl);
     return () => observer.disconnect();
@@ -156,6 +165,8 @@ export function MessageList({
   function handleScroll() {
     const el = timelineRef.current;
     if (!el) return;
+    // 程序贴底后短时间内的 scroll 事件是自家滚动，不据此关闭跟随
+    if (Date.now() - lastPinAtRef.current < 150) return;
     const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
     stickToBottomRef.current = distance < STICK_THRESHOLD_PX;
     setShowJump(distance >= STICK_THRESHOLD_PX * 4);
@@ -165,6 +176,7 @@ export function MessageList({
     const el = timelineRef.current;
     if (!el) return;
     stickToBottomRef.current = true;
+    lastPinAtRef.current = Date.now();
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     setShowJump(false);
   }

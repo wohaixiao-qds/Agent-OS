@@ -282,6 +282,14 @@ export function ShellProvider({ children }: { children: ReactNode }) {
 
         if (event.type === "message.upsert") {
           upsertMessage(event.message);
+          // 侧边栏未读/相对时间随任何话题的新消息实时更新
+          setTopics((prev) =>
+            prev.map((t) =>
+              t.id === event.message.topicId
+                ? { ...t, lastMessageAt: event.message.createdAt }
+                : t,
+            ),
+          );
           if (
             event.message.kind === "clarification" ||
             event.message.kind === "app-tool" ||
@@ -484,11 +492,18 @@ export function ShellProvider({ children }: { children: ReactNode }) {
     workspaces,
     workspace,
     setWorkspaceId: (id) => {
+      // 重复设置同一工作区（如派单回调里对齐目录）不得重置话题选择，
+      // 否则会把刚激活的派单话题覆盖回列表第一话
+      if (id === workspaceId) return;
       setWorkspaceId(id);
       setSelectedTopicId(null);
       void api.listTopics(id).then((list) => {
         setTopics(list);
-        setSelectedTopicId(list[0]?.id ?? null);
+        setSelectedTopicId((prev) =>
+          prev && list.some((t) => t.id === prev)
+            ? prev
+            : (list[0]?.id ?? null),
+        );
       });
     },
     topics,

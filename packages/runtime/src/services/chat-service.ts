@@ -117,8 +117,21 @@ export class ChatService {
 
   async listTopics(workspaceId?: string): Promise<Topic[]> {
     const state = await this.store.load();
-    if (!workspaceId) return state.topics;
-    return state.topics.filter((t) => t.workspaceId === workspaceId);
+    const scoped = workspaceId
+      ? state.topics.filter((t) => t.workspaceId === workspaceId)
+      : state.topics;
+    // 侧边栏「多久没动静/未读」需要每个话题最后一条消息的时间
+    const lastAt = new Map<string, string>();
+    for (const message of state.messages) {
+      const prev = lastAt.get(message.topicId);
+      if (!prev || message.createdAt > prev) {
+        lastAt.set(message.topicId, message.createdAt);
+      }
+    }
+    return scoped.map((topic) => ({
+      ...topic,
+      lastMessageAt: lastAt.get(topic.id) ?? topic.createdAt,
+    }));
   }
 
   async getTopic(id: string): Promise<Topic | undefined> {

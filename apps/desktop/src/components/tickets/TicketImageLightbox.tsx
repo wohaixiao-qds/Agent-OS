@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type TicketImageLightboxProps = {
+  /** 展示地址（鉴权代理后的本地 URL）。 */
   urls: string[];
+  /** 系统浏览器打开用的原始地址（如禅道站内 URL），缺省同 urls。 */
+  externalUrls?: string[];
   index: number;
   onClose: () => void;
   onIndexChange: (index: number) => void;
@@ -17,12 +20,14 @@ const MAX_ZOOM = 5;
 
 export function TicketImageLightbox({
   urls,
+  externalUrls,
   index,
   onClose,
   onIndexChange,
 }: TicketImageLightboxProps) {
   const safeIndex = Math.min(Math.max(index, 0), Math.max(urls.length - 1, 0));
   const url = urls[safeIndex];
+  const externalUrl = externalUrls?.[safeIndex] ?? url;
   const stageRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [fitScale, setFitScale] = useState(1);
@@ -154,7 +159,7 @@ export function TicketImageLightbox({
             <button
               type="button"
               className="ticket-lightbox-link"
-              onClick={() => openInSystemBrowser(url)}
+              onClick={() => openInSystemBrowser(externalUrl)}
             >
               系统浏览器打开
             </button>
