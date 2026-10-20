@@ -195,7 +195,10 @@ const agentSchedules = new AgentScheduleService(dataDir, {
 const router = createRouter();
 registerWorkspaceRoutes(router, workspaceService);
 registerBotRoutes(router, botService);
-registerTopicRoutes(router, chatService);
+registerTopicRoutes(router, chatService, async (topicId) => {
+  // 已派单的会话删除后还原单据（清派单记录与看板行）
+  await ticketService.onTopicDeleted(topicId);
+});
 registerPipelineRoutes(router, pipelineService);
 registerClarificationRoutes(router, clarificationService);
 registerSettingsRoutes(router, settingsService);

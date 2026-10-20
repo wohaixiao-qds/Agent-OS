@@ -10,6 +10,7 @@ export function registerTopicRoutes(
     delete: (path: string, handler: RouteHandler) => void;
   },
   service: ChatService,
+  onTopicDeleted?: (topicId: string) => Promise<unknown>,
 ): void {
   router.get("/api/topics", async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
@@ -82,6 +83,8 @@ export function registerTopicRoutes(
   router.delete("/api/topics/:id", async (_req, res, params) => {
     try {
       await service.deleteTopic(params.id);
+      // 已派单的会话删除后还原单据：清派单记录与看板行，工单回到可派状态
+      if (onTopicDeleted) await onTopicDeleted(params.id);
       res.writeHead(204);
       res.end();
     } catch (error) {

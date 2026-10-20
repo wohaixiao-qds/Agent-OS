@@ -343,6 +343,44 @@ describe("TicketService board + state APIs", () => {
     expect(list[0]?.held).toBeUndefined();
   });
 
+  it("onTopicDeleted restores the ticket and cleans the board row", async () => {
+    getIssueDetail.mockResolvedValue(fakeDetail());
+    const result = await ticketService.dispatchToCeo({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+    });
+    await result.done;
+    const id = boardTaskIdForGitee("818309", "TEST-42");
+    expect((await taskBoard.list()).some((t) => t.id === id)).toBe(true);
+
+    const { restored } = await ticketService.onTopicDeleted(result.topicId);
+    expect(restored).toBe(1);
+
+    // 看板幽灵行清除
+    expect((await taskBoard.list()).some((t) => t.id === id)).toBe(false);
+
+    const { listMyTodoIssues } = (await import("../gitee/client.js")) as {
+      listMyTodoIssues: ReturnType<typeof vi.fn>;
+    };
+    listMyTodoIssues.mockResolvedValue([
+      {
+        id: 42,
+        ident: "TEST-42",
+        title: "issue TEST-42",
+        stateTitle: "进行中",
+        sprintTitle: "",
+        programId: "818309",
+        url: "https://gitee.com/i",
+        priority: "主要",
+        priorityRank: 20,
+      },
+    ]);
+    const list = await ticketService.listTodos("gitee", "818309");
+    // 派单记录清除 → 工单回到未派发，可重新接手
+    expect(list[0]?.topicId).toBeUndefined();
+  });
+
   it("listIssueStates requires issueTypeId then lists type states", async () => {
     getIssueDetail.mockResolvedValue(fakeDetail({ issueTypeId: undefined }));
     await expect(

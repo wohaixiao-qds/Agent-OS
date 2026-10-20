@@ -400,6 +400,19 @@ export class TaskBoardService {
     return tasks.find((t) => t.topicId === topicId);
   }
 
+  /** Drop rows bound to a deleted topic (ticket returned to the pool). */
+  async removeByTopicId(topicId: string): Promise<boolean> {
+    return this.transact((tasks) => {
+      const next = tasks.filter((t) => t.topicId !== topicId);
+      const removed = next.length !== tasks.length;
+      if (removed) {
+        tasks.length = 0;
+        tasks.push(...next);
+      }
+      return removed;
+    });
+  }
+
   async findByExternalIssue(
     provider: TicketProviderId,
     issueIdent: string,

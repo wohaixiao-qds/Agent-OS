@@ -165,6 +165,16 @@ export class TicketService {
     return { held: input.held };
   }
 
+  /**
+   * 会话删除后的单据还原：清掉该话题的派单记录与看板行，
+   * 工单回到「未派发」状态，收件箱/定时拉单可重新接手。
+   */
+  async onTopicDeleted(topicId: string): Promise<{ restored: number }> {
+    const removed = await this.dispatches.removeByTopicId(topicId);
+    await this.taskBoard.removeByTopicId(topicId);
+    return { restored: removed.length };
+  }
+
   getTodoDetail(
     providerId: string,
     projectId: string,

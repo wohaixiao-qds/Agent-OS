@@ -129,4 +129,27 @@ export class TicketDispatchStore {
     }
     return null;
   }
+
+  /** Remove records bound to a deleted topic; returns the removed records. */
+  async removeByTopicId(topicId: string): Promise<TicketDispatchRecord[]> {
+    const all = await this.loadAll();
+    const removed: TicketDispatchRecord[] = [];
+    for (const [key, record] of all) {
+      if (record.topicId === topicId) {
+        all.delete(key);
+        removed.push(record);
+      }
+    }
+    if (removed.length > 0) {
+      const path = this.storePath();
+      await mkdir(dirname(path), { recursive: true });
+      const byKey = Object.fromEntries(all);
+      await writeFile(
+        path,
+        `${JSON.stringify({ byKey }, null, 2)}\n`,
+        "utf8",
+      );
+    }
+    return removed;
+  }
 }
