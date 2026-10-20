@@ -309,11 +309,11 @@ export function ShellProvider({ children }: { children: ReactNode }) {
                 t.id === event.topic.id ? event.topic : t,
               );
             }
-            // 后台创建的话题（定时拉单派单等）：属于当前工作区则直接进列表，
-            // 否则留在别的工作区，切换过去时自然会拉到。
+            // 后台创建的话题（定时拉单派单等）：按创建顺序补到列表末尾，
+            // 与服务端正序一致；别的工作区的话题切换过去时自然会拉到。
             const scope = workspaceIdRef.current;
             if (!scope || event.topic.workspaceId === scope) {
-              return [event.topic, ...prev];
+              return [...prev, event.topic];
             }
             return prev;
           });
@@ -365,7 +365,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
         });
         const list = await refreshTopics(workspaceId);
         setSelectedTopicId(topic.id);
-        setTopics(list.some((t) => t.id === topic.id) ? list : [topic, ...list]);
+        // 新话题按创建顺序落在列表末尾（与服务端排序一致）
+        setTopics(list.some((t) => t.id === topic.id) ? list : [...list, topic]);
         return topic;
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "创建话题失败");

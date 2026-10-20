@@ -123,6 +123,10 @@ export class ChatService {
     const scoped = workspaceId
       ? state.topics.filter((t) => t.workspaceId === workspaceId)
       : state.topics;
+    // 侧边栏按创建时间正序：新话题固定在底部，位置不随刷新/事件跳动
+    const ordered = [...scoped].sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt),
+    );
     // 侧边栏「多久没动静/未读」需要每个话题最后一条消息的时间
     const lastAt = new Map<string, string>();
     for (const message of state.messages) {
@@ -131,7 +135,7 @@ export class ChatService {
         lastAt.set(message.topicId, message.createdAt);
       }
     }
-    return scoped.map((topic) => ({
+    return ordered.map((topic) => ({
       ...topic,
       lastMessageAt: lastAt.get(topic.id) ?? topic.createdAt,
     }));
