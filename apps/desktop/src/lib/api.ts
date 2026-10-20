@@ -543,6 +543,7 @@ export const api = {
       kind?: "bug" | "task";
       topicId?: string;
       pipelineStage?: string;
+      held?: boolean;
     }>
   > {
     const q = options?.all ? "?all=1" : "";
@@ -592,6 +593,22 @@ export const api = {
     return request("/api/tickets/dispatch", {
       method: "POST",
       body: JSON.stringify(input),
+    });
+  },
+
+  setTicketHold(input: {
+    provider: TicketProviderId;
+    projectId: string;
+    issueKey: string;
+    held: boolean;
+  }): Promise<{ held: boolean }> {
+    return request(`/api/tickets/${input.provider}/holds`, {
+      method: "POST",
+      body: JSON.stringify({
+        projectId: input.projectId,
+        issueKey: input.issueKey,
+        held: input.held,
+      }),
     });
   },
 

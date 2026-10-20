@@ -6,7 +6,8 @@ import type { BotService } from "./bot-service.js";
 import type { ChatService } from "./chat-service.js";
 import type { WorkspaceService } from "./workspace-service.js";
 import { TaskBoardService, boardTaskIdForTicket } from "./task-board-service.js";
-import { TicketDispatchStore } from "./ticket-dispatches.js";
+import { TicketDispatchStore, dispatchKey } from "./ticket-dispatches.js";
+import { TicketHoldStore } from "./ticket-holds.js";
 import type {
   TicketProvider,
   TicketProviderId,
@@ -20,6 +21,8 @@ import type {
 export type TicketListItem = TicketSummary & {
   topicId?: string;
   pipelineStage?: string;
+  /** 手动「暂不处理」：自动派单（定时拉单/串行接单）跳过，直到手工恢复。 */
+  held?: boolean;
 };
 
 function pathKey(value: string): string {
@@ -28,6 +31,7 @@ function pathKey(value: string): string {
 
 export class TicketService {
   private readonly dispatches: TicketDispatchStore;
+  private readonly holds: TicketHoldStore;
   private readonly taskBoard: TaskBoardService;
 
   constructor(
@@ -43,6 +47,7 @@ export class TicketService {
     this.providers = providers;
     this.taskBoard = taskBoard ?? new TaskBoardService(dataDir);
     this.dispatches = new TicketDispatchStore(dataDir);
+    this.holds = new TicketHoldStore(dataDir);
   }
 
   private readonly providers: Partial<
@@ -121,6 +126,7 @@ export class TicketService {
     const provider = this.provider(providerId);
     const todos = await provider.listTodos(projectId, options);
     const state = await this.store.load();
+    const heldKeys = await this.holds.heldKeys();
     return Promise.all(
       todos.map(async (todo) => {
         const record = await this.dispatches.find(provider.id, todo.key);
@@ -133,9 +139,30 @@ export class TicketService {
           // 定时任务和收件箱把它当新工单重新接手。
           topicId: topic?.id,
           pipelineStage: topic?.pipelineStage,
+          held: heldKeys.has(dispatchKey(provider.id, todo.key)) || undefined,
         };
       }),
     );
+  }
+
+  /** 手动「暂不处理」开关：标记后自动派单跳过该工单，手工恢复后可再派。 */
+  async holdTicket(input: {
+    provider: TicketProviderId;
+    projectId: string;
+    issueKey: string;
+    held: boolean;
+  }): Promise<{ held: boolean }> {
+    const provider = this.provider(input.provider);
+    const project = await provider.getProject(input.projectId);
+    if (!project) {
+      throw new Error(`${provider.label} 项目不存在: ${input.projectId}`);
+    }
+    if (input.held) {
+      await this.holds.hold(provider.id, input.issueKey);
+    } else {
+      await this.holds.release(provider.id, input.issueKey);
+    }
+    return { held: input.held };
   }
 
   getTodoDetail(
@@ -261,6 +288,9 @@ export class TicketService {
       workspaceId: workspace.id,
       title: `${detail.ident} ${detail.title}`.slice(0, 120),
     });
+
+    // 手工派发视为恢复处理：清掉「暂不处理」标记，避免列表残留误导
+    await this.holds.release(input.provider, input.issueKey);
 
     // 话题建好就返回，前端立刻切换激活；附图下载等重活后台继续
     // （内网下载可能要几十秒，同步等会把激活和定时拉单都拖住）。

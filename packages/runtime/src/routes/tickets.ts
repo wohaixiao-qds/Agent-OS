@@ -199,4 +199,32 @@ export function registerTicketRoutes(
       sendError(res, statusFor(message), message);
     }
   });
+
+  router.post("/api/tickets/:provider/holds", async (req, res, params) => {
+    try {
+      const body = await readJsonBody<{
+        projectId?: string;
+        issueKey?: string;
+        held?: boolean;
+      }>(req);
+      if (!body.projectId?.trim() || !body.issueKey?.trim()) {
+        sendError(res, 400, "projectId 与 issueKey 必填");
+        return;
+      }
+      if (typeof body.held !== "boolean") {
+        sendError(res, 400, "held 必须是布尔值");
+        return;
+      }
+      const result = await service.holdTicket({
+        provider: providerParam(params.provider),
+        projectId: body.projectId.trim(),
+        issueKey: body.issueKey.trim(),
+        held: body.held,
+      });
+      sendJson(res, 200, result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bad request";
+      sendError(res, statusFor(message), message);
+    }
+  });
 }

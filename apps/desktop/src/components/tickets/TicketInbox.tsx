@@ -49,6 +49,7 @@ function toTicket(row: Awaited<ReturnType<typeof api.listTicketTodos>>[number]):
     kind: row.kind,
     topicId: row.topicId,
     pipelineStage: row.pipelineStage as TicketItem["pipelineStage"],
+    held: row.held,
   };
 }
 
@@ -310,6 +311,33 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
       setNotice(`已交给 CEO：${ticket.ident}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "派发失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleHoldToggle(ticket: TicketItem) {
+    if (!project) return;
+    const held = !ticket.held;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await api.setTicketHold({
+        provider,
+        projectId: project.id,
+        issueKey: ticket.key,
+        held,
+      });
+      setTickets((prev) =>
+        prev.map((t) => (t.key === ticket.key ? { ...t, held: held || undefined } : t)),
+      );
+      setNotice(
+        held
+          ? `已标记暂不处理：${ticket.ident}（自动派单会跳过）`
+          : `已恢复派单：${ticket.ident}`,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "操作失败");
     } finally {
       setBusy(false);
     }
@@ -585,6 +613,9 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                           >
                             {ticket.priority}
                           </span>
+                          {ticket.held ? (
+                            <span className="ticket-held-chip">暂不处理</span>
+                          ) : null}
                           {ticket.pipelineStage &&
                           ticket.pipelineStage !== "idle" ? (
                             <span className="ticket-live-chip">进行中</span>
@@ -613,6 +644,23 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                           }}
                         >
                           改状态
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            ticket.held
+                              ? "ticket-hold-toggle is-held"
+                              : "ticket-hold-toggle"
+                          }
+                          disabled={busy}
+                          title={
+                            ticket.held
+                              ? "恢复后自动派单可再次接手这张工单"
+                              : "标记后自动派单（定时拉单/串行接单）跳过这张工单，直到手工恢复"
+                          }
+                          onClick={() => void handleHoldToggle(ticket)}
+                        >
+                          {ticket.held ? "恢复派单" : "暂不处理"}
                         </button>
                       </div>
                     </li>

@@ -266,6 +266,83 @@ describe("TicketService board + state APIs", () => {
     expect(alive?.topicId).toBe(liveId);
   });
 
+  it("holdTicket marks a todo held and release restores it", async () => {
+    const { listMyTodoIssues } = (await import("../gitee/client.js")) as {
+      listMyTodoIssues: ReturnType<typeof vi.fn>;
+    };
+    listMyTodoIssues.mockResolvedValue([
+      {
+        id: 42,
+        ident: "TEST-42",
+        title: "issue TEST-42",
+        stateTitle: "进行中",
+        sprintTitle: "",
+        programId: "818309",
+        url: "https://gitee.com/i",
+        priority: "主要",
+        priorityRank: 20,
+      },
+    ]);
+
+    const before = await ticketService.listTodos("gitee", "818309");
+    expect(before[0]?.held).toBeUndefined();
+
+    await ticketService.holdTicket({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+      held: true,
+    });
+    const held = await ticketService.listTodos("gitee", "818309");
+    expect(held[0]?.held).toBe(true);
+
+    await ticketService.holdTicket({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+      held: false,
+    });
+    const released = await ticketService.listTodos("gitee", "818309");
+    expect(released[0]?.held).toBeUndefined();
+  });
+
+  it("dispatchToCeo on a held ticket clears the hold", async () => {
+    getIssueDetail.mockResolvedValue(fakeDetail());
+    await ticketService.holdTicket({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+      held: true,
+    });
+
+    const result = await ticketService.dispatchToCeo({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+    });
+    await result.done;
+
+    const { listMyTodoIssues } = (await import("../gitee/client.js")) as {
+      listMyTodoIssues: ReturnType<typeof vi.fn>;
+    };
+    listMyTodoIssues.mockResolvedValue([
+      {
+        id: 42,
+        ident: "TEST-42",
+        title: "issue TEST-42",
+        stateTitle: "进行中",
+        sprintTitle: "",
+        programId: "818309",
+        url: "https://gitee.com/i",
+        priority: "主要",
+        priorityRank: 20,
+      },
+    ]);
+    const list = await ticketService.listTodos("gitee", "818309");
+    // 手工派发视为恢复处理，不残留「暂不处理」
+    expect(list[0]?.held).toBeUndefined();
+  });
+
   it("listIssueStates requires issueTypeId then lists type states", async () => {
     getIssueDetail.mockResolvedValue(fakeDetail({ issueTypeId: undefined }));
     await expect(

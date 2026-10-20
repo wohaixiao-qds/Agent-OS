@@ -48,6 +48,8 @@ export interface TicketItem {
   /** Set after hand-off (UI mock) */
   topicId?: string;
   pipelineStage?: TicketPipelineStage;
+  /** 手动「暂不处理」：自动派单跳过，直到手工恢复。 */
+  held?: boolean;
 }
 
 export interface TicketDetail extends TicketItem {

@@ -246,12 +246,17 @@ export class TicketPullScheduleService {
       .filter(
         (todo) =>
           !todo.topicId &&
+          !todo.held &&
           matchesPullPriority(todo.priority, task.priority),
       )
       .sort(comparePriorityThenIdent);
     const next = matched[0];
     if (!next) {
-      return `拉到 ${todos.length} 张，暂无符合优先级的新工单`;
+      // 全被「暂不处理」挡住时说明状态可解释，不算异常
+      const heldCount = todos.filter((t) => t.held && !t.topicId).length;
+      return `拉到 ${todos.length} 张，暂无符合优先级的新工单${
+        heldCount > 0 ? `（${heldCount} 张已标记暂不处理）` : ""
+      }`;
     }
     try {
       const result = (await this.tickets.dispatchToCeo({
