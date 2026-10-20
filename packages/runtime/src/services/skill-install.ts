@@ -157,6 +157,16 @@ export class SkillLibrary {
         await (this.options.runInstall ?? npxSkillsAdd)(upstream);
       } catch (error) {
         const message = error instanceof Error ? error.message : "安装失败";
+        // npx 不可用（未装 Node）或网络失败时兜底：安装包里带了一份内置副本
+        const bundled = await installBundledSkill(parsed.id, this.home);
+        if (bundled) {
+          return {
+            id: parsed.id,
+            source: `bundled:${parsed.id}`,
+            localPath: bundled,
+            status: "ready",
+          };
+        }
         return failed(parsed.id, upstream, message.slice(0, 500));
       }
       const after = resolveUserSkillPath(this.home, parsed.id);
@@ -165,6 +175,15 @@ export class SkillLibrary {
           id: parsed.id,
           source: upstream,
           localPath: after,
+          status: "ready",
+        };
+      }
+      const bundledAfterFail = await installBundledSkill(parsed.id, this.home);
+      if (bundledAfterFail) {
+        return {
+          id: parsed.id,
+          source: `bundled:${parsed.id}`,
+          localPath: bundledAfterFail,
           status: "ready",
         };
       }
