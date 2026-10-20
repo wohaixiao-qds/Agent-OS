@@ -557,27 +557,23 @@
   box-shadow: 0 0 5px color-mix(in srgb, #60a5fa 45%, transparent);
 }
 
-/* —— 卡片 ⋯ 菜单 —— */
-.ticket-menu-wrap {
-  position: relative;
-  flex: 0 0 auto;
-}
-
+/* —— 卡片 ⋯ 菜单（portal 挂 body，fixed 悬浮，不受滚动容器裁剪）—— */
 .ticket-menu-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 24;
+  z-index: 998;
 }
 
 .ticket-more {
   appearance: none;
   cursor: pointer;
-  width: 34px;
+  width: 30px;
+  height: 26px;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--text) 28%, var(--border));
   background: var(--bg-pane);
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   transition:
@@ -597,10 +593,8 @@
 }
 
 .ticket-card-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 25;
+  position: fixed;
+  z-index: 999;
   min-width: 128px;
   padding: 4px;
   display: flex;
@@ -609,7 +603,7 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
-  box-shadow: 0 12px 32px color-mix(in srgb, #000 35%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 45%, transparent);
 }
 
 .ticket-card-menu button {
@@ -656,13 +650,13 @@
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
   cursor: pointer;
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
-  padding: 7px 10px;
+  padding: 5px 10px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
   color: color-mix(in srgb, var(--accent) 75%, var(--ticket-ink));
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: none;

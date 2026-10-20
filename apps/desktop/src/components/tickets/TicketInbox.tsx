@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { api, type TicketProviderId, type TicketsStatus } from "../../lib/api";
 import { useShell } from "../../lib/shell-context";
@@ -125,8 +126,33 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   const [queueFilter, setQueueFilter] = useState<
     "all" | "pending" | "active" | "done" | "held"
   >("all");
-  // 当前打开 ⋯ 菜单的工单 key（同时只开一个）
+  // 当前打开 ⋯ 菜单的工单 key（同时只开一个）；菜单走 portal 悬浮，
+  // 不受工单列表滚动容器裁剪
   const [menuKey, setMenuKey] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(
+    null,
+  );
+
+  function closeMenu() {
+    setMenuKey(null);
+    setMenuPos(null);
+  }
+
+  function openMenu(ticket: TicketItem, button: HTMLElement) {
+    const rect = button.getBoundingClientRect();
+    const MENU_W = 136;
+    const MENU_H = 132;
+    const left = Math.max(
+      8,
+      Math.min(rect.right - MENU_W, window.innerWidth - MENU_W - 8),
+    );
+    const top =
+      rect.bottom + 4 + MENU_H > window.innerHeight
+        ? Math.max(8, rect.top - MENU_H - 4)
+        : rect.bottom + 4;
+    setMenuPos({ top, left });
+    setMenuKey(ticket.key);
+  }
 
   const providerLabel =
     PROVIDERS.find((p) => p.id === provider)?.label ?? provider;
@@ -615,7 +641,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
       ) : null}
 
       {configuredProviders.length === 0 ? null : (
-      <div className="ticket-inbox-scroll">
+      <div className="ticket-inbox-scroll" onScroll={closeMenu}>
         {loading || todosLoading ? (
           <div className="ticket-loading" role="status" aria-live="polite">
             <span className="ticket-loading-spinner" aria-hidden />
@@ -704,66 +730,77 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                         >
                           交给 CEO
                         </button>
-                        <div className="ticket-menu-wrap">
-                          {menuKey === ticket.key ? (
-                            <div
-                              className="ticket-menu-backdrop"
-                              onClick={() => setMenuKey(null)}
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                          <button
-                            type="button"
-                            className="ticket-more"
-                            aria-label="更多操作"
-                            title="改状态 / 暂不处理 / 打开原单"
-                            disabled={busy}
-                            onClick={() =>
-                              setMenuKey((k) => (k === ticket.key ? null : ticket.key))
+                        <button
+                          type="button"
+                          className="ticket-more"
+                          aria-label="更多操作"
+                          aria-haspopup="menu"
+                          aria-expanded={menuKey === ticket.key}
+                          title="改状态 / 暂不处理 / 打开原单"
+                          disabled={busy}
+                          onClick={(e) => {
+                            if (menuKey === ticket.key) {
+                              closeMenu();
+                              return;
                             }
-                          >
-                            ⋯
-                          </button>
-                          {menuKey === ticket.key ? (
-                            <div className="ticket-card-menu" role="menu">
-                              <button
-                                type="button"
-                                role="menuitem"
-                                onClick={() => {
-                                  setMenuKey(null);
-                                  setSelectedKey(ticket.key);
-                                  setStatePickerTicket(ticket);
-                                  setStatePickerOpen(true);
-                                  setNotice(null);
-                                }}
-                              >
-                                改状态
-                              </button>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                onClick={() => {
-                                  setMenuKey(null);
-                                  void handleHoldToggle(ticket);
-                                }}
-                              >
-                                {ticket.held ? "恢复派单" : "暂不处理"}
-                              </button>
-                              {ticket.url ? (
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() => {
-                                    setMenuKey(null);
-                                    window.open(ticket.url, "_blank", "noopener");
-                                  }}
+                            openMenu(ticket, e.currentTarget);
+                          }}
+                        >
+                          ⋯
+                        </button>
+                        {menuKey === ticket.key && menuPos
+                          ? createPortal(
+                              <>
+                                <div
+                                  className="ticket-menu-backdrop"
+                                  onClick={closeMenu}
+                                  aria-hidden="true"
+                                />
+                                <div
+                                  className="ticket-card-menu"
+                                  role="menu"
+                                  style={menuPos}
                                 >
-                                  打开原单
-                                </button>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() => {
+                                      closeMenu();
+                                      setSelectedKey(ticket.key);
+                                      setStatePickerTicket(ticket);
+                                      setStatePickerOpen(true);
+                                      setNotice(null);
+                                    }}
+                                  >
+                                    改状态
+                                  </button>
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() => {
+                                      closeMenu();
+                                      void handleHoldToggle(ticket);
+                                    }}
+                                  >
+                                    {ticket.held ? "恢复派单" : "暂不处理"}
+                                  </button>
+                                  {ticket.url ? (
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        closeMenu();
+                                        window.open(ticket.url, "_blank", "noopener");
+                                      }}
+                                    >
+                                      打开原单
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </>,
+                              document.body,
+                            )
+                          : null}
                       </div>
                     </li>
                   );

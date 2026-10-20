@@ -83,6 +83,8 @@ describe("TicketInbox (API)", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
+    // 菜单走 portal 挂 body；清掉上个用例的容器与悬浮菜单残留
+    document.body.innerHTML = "";
     container = document.createElement("div");
     document.body.appendChild(container);
     vi.mocked(api.listTicketIssueStates).mockClear();
@@ -111,7 +113,7 @@ describe("TicketInbox (API)", () => {
     // 队列摘要条可见
     expect(container.textContent).toContain("待派 1");
 
-    // 次要操作收进 ⋯ 菜单：打开后可见
+    // 次要操作收进 ⋯ 菜单：打开后可见（portal 挂在 body 上）
     const moreBtn = container.querySelector("button.ticket-more") as HTMLButtonElement | null;
     expect(moreBtn).toBeTruthy();
     await act(async () => {
@@ -120,9 +122,9 @@ describe("TicketInbox (API)", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(container.textContent).toContain("改状态");
-    expect(container.textContent).toContain("暂不处理");
-    expect(container.textContent).toContain("打开原单");
+    expect(document.body.textContent).toContain("改状态");
+    expect(document.body.textContent).toContain("暂不处理");
+    expect(document.body.textContent).toContain("打开原单");
   });
 
   it("requests issue states when opening change-state picker", async () => {
@@ -149,7 +151,7 @@ describe("TicketInbox (API)", () => {
       await Promise.resolve();
     });
 
-    const changeBtn = Array.from(container.querySelectorAll("button")).find(
+    const changeBtn = Array.from(document.querySelectorAll("button")).find(
       (el) => el.textContent === "改状态",
     );
     expect(changeBtn).toBeTruthy();
@@ -192,7 +194,7 @@ describe("TicketInbox (API)", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    const holdItem = Array.from(container.querySelectorAll("button")).find(
+    const holdItem = Array.from(document.querySelectorAll("button")).find(
       (el) => el.textContent === "暂不处理",
     );
     expect(holdItem).toBeTruthy();
@@ -225,7 +227,7 @@ describe("TicketInbox (API)", () => {
       await Promise.resolve();
     });
     expect(
-      Array.from(container.querySelectorAll("button")).some(
+      Array.from(document.querySelectorAll("button")).some(
         (el) => el.textContent === "恢复派单",
       ),
     ).toBe(true);
