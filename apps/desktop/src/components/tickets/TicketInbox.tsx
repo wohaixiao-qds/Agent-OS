@@ -121,6 +121,12 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
   const [todosLoading, setTodosLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [includeAll, setIncludeAll] = useState(false);
+  // 队列筛选：全部 / 待派 / 处理中 / 已完成 / 暂不处理
+  const [queueFilter, setQueueFilter] = useState<
+    "all" | "pending" | "active" | "done" | "held"
+  >("all");
+  // 当前打开 ⋯ 菜单的工单 key（同时只开一个）
+  const [menuKey, setMenuKey] = useState<string | null>(null);
 
   const providerLabel =
     PROVIDERS.find((p) => p.id === provider)?.label ?? provider;
@@ -146,7 +152,37 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
 
 
   const project = projects.find((p) => p.id === projectId) ?? null;
-  const groups = useMemo(() => groupTicketsBySprint(tickets), [tickets]);
+
+  // 队列口径：暂不处理优先归 held；已派未完成 = 处理中；完成/阻塞单列
+  const queue = useMemo(() => {
+    let pending = 0;
+    let active = 0;
+    let done = 0;
+    let held = 0;
+    for (const t of tickets) {
+      if (t.held) held++;
+      else if (t.pipelineStage === "completed") done++;
+      else if (t.topicId) active++;
+      else pending++;
+    }
+    return { pending, active, done, held };
+  }, [tickets]);
+
+  const visibleTickets = useMemo(() => {
+    if (queueFilter === "all") return tickets;
+    return tickets.filter((t) => {
+      if (queueFilter === "held") return Boolean(t.held);
+      if (queueFilter === "pending") return !t.topicId && !t.held;
+      if (queueFilter === "active")
+        return Boolean(t.topicId) && t.pipelineStage !== "completed" && !t.held;
+      return t.pipelineStage === "completed" && !t.held;
+    });
+  }, [tickets, queueFilter]);
+
+  const groups = useMemo(
+    () => groupTicketsBySprint(visibleTickets),
+    [visibleTickets],
+  );
   const selected =
     tickets.find((t) => t.key === selectedKey) ?? tickets[0] ?? null;
 
@@ -534,6 +570,32 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         </div>
       </div>
 
+      <div className="ticket-queue-bar" aria-label="工单队列">
+        {(
+          [
+            ["all", `全部 ${tickets.length}`],
+            ["pending", `待派 ${queue.pending}`],
+            ["active", `处理中 ${queue.active}`],
+            ["done", `已完成 ${queue.done}`],
+            ["held", `暂不处理 ${queue.held}`],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={
+              queueFilter === key
+                ? "ticket-queue-chip is-active"
+                : "ticket-queue-chip"
+            }
+            aria-pressed={queueFilter === key}
+            onClick={() => setQueueFilter(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {notice ? (
         <p className="ticket-notice" role="status">
           {notice}
@@ -582,13 +644,23 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
               <ul className="ticket-card-list">
                 {group.tickets.map((ticket, index) => {
                   const active = selected?.key === ticket.key;
+                  // 左侧状态竖条：处理中呼吸、暂不处理琥珀、完成绿、阻塞红
+                  const rail = ticket.held
+                    ? "is-held"
+                    : ticket.pipelineStage === "completed"
+                      ? "is-done"
+                      : ticket.pipelineStage === "blocked"
+                        ? "is-blocked"
+                        : ticket.topicId
+                          ? "is-running"
+                          : "";
                   return (
                     <li
                       key={ticket.key}
                       className={[
                         "ticket-card",
                         active ? "is-active" : "",
-                        ticket.held ? "is-held" : "",
+                        rail,
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -604,12 +676,12 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                             <span
                               className={
                                 ticket.kind === "bug"
-                                  ? "ticket-kind-chip is-bug"
-                                  : "ticket-kind-chip is-task"
+                                  ? "ticket-kind-dot is-bug"
+                                  : "ticket-kind-dot is-task"
                               }
-                            >
-                              {ticket.kind === "bug" ? "缺陷" : "任务"}
-                            </span>
+                              title={ticket.kind === "bug" ? "缺陷" : "任务"}
+                              aria-hidden="true"
+                            />
                           ) : null}
                           <span className="ticket-ident mono">{ticket.ident}</span>
                           <span
@@ -619,10 +691,6 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                           </span>
                           {ticket.held ? (
                             <span className="ticket-held-chip">暂不处理</span>
-                          ) : null}
-                          {ticket.pipelineStage &&
-                          ticket.pipelineStage !== "idle" ? (
-                            <span className="ticket-live-chip">进行中</span>
                           ) : null}
                         </div>
                         <p className="ticket-card-title">{ticket.title}</p>
@@ -636,36 +704,66 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                         >
                           交给 CEO
                         </button>
-                        <button
-                          type="button"
-                          className="ticket-change-state"
-                          disabled={busy}
-                          onClick={() => {
-                            setSelectedKey(ticket.key);
-                            setStatePickerTicket(ticket);
-                            setStatePickerOpen(true);
-                            setNotice(null);
-                          }}
-                        >
-                          改状态
-                        </button>
-                        <button
-                          type="button"
-                          className={
-                            ticket.held
-                              ? "ticket-hold-toggle is-held"
-                              : "ticket-hold-toggle"
-                          }
-                          disabled={busy}
-                          title={
-                            ticket.held
-                              ? "恢复后自动派单可再次接手这张工单"
-                              : "标记后自动派单（定时拉单/串行接单）跳过这张工单，直到手工恢复"
-                          }
-                          onClick={() => void handleHoldToggle(ticket)}
-                        >
-                          {ticket.held ? "恢复派单" : "暂不处理"}
-                        </button>
+                        <div className="ticket-menu-wrap">
+                          {menuKey === ticket.key ? (
+                            <div
+                              className="ticket-menu-backdrop"
+                              onClick={() => setMenuKey(null)}
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          <button
+                            type="button"
+                            className="ticket-more"
+                            aria-label="更多操作"
+                            title="改状态 / 暂不处理 / 打开原单"
+                            disabled={busy}
+                            onClick={() =>
+                              setMenuKey((k) => (k === ticket.key ? null : ticket.key))
+                            }
+                          >
+                            ⋯
+                          </button>
+                          {menuKey === ticket.key ? (
+                            <div className="ticket-card-menu" role="menu">
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setMenuKey(null);
+                                  setSelectedKey(ticket.key);
+                                  setStatePickerTicket(ticket);
+                                  setStatePickerOpen(true);
+                                  setNotice(null);
+                                }}
+                              >
+                                改状态
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setMenuKey(null);
+                                  void handleHoldToggle(ticket);
+                                }}
+                              >
+                                {ticket.held ? "恢复派单" : "暂不处理"}
+                              </button>
+                              {ticket.url ? (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setMenuKey(null);
+                                    window.open(ticket.url, "_blank", "noopener");
+                                  }}
+                                >
+                                  打开原单
+                                </button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </li>
                   );

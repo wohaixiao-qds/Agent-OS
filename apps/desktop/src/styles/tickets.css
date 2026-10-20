@@ -346,7 +346,9 @@
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
+  /* 左侧状态竖条常驻占位，避免有无竖条时内容抖动 */
   border: 1px solid var(--border);
+  border-left: 2px solid transparent;
   background:
     linear-gradient(
       135deg,
@@ -475,6 +477,156 @@
   border-radius: 999px;
   background: color-mix(in srgb, #f59e0b 16%, transparent);
   border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+}
+
+/* —— 队列摘要条（全部/待派/处理中/已完成/暂不处理）—— */
+.ticket-queue-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 2px;
+}
+
+.ticket-queue-chip {
+  appearance: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.ticket-queue-chip:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.ticket-queue-chip.is-active {
+  color: color-mix(in srgb, var(--accent) 78%, var(--ticket-ink));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* —— 卡片左竖条状态 —— */
+.ticket-card.is-running {
+  border-left-color: var(--accent);
+  animation: ticket-rail-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes ticket-rail-pulse {
+  50% {
+    border-left-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+}
+
+.ticket-card.is-done {
+  border-left-color: var(--success);
+}
+
+.ticket-card.is-blocked {
+  border-left-color: var(--danger);
+}
+
+.ticket-card.is-held {
+  border-left-color: #f59e0b;
+}
+
+/* 缺陷/任务用色点表达，替代文字徽章 */
+.ticket-kind-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.ticket-kind-dot.is-bug {
+  background: #f87171;
+  box-shadow: 0 0 5px color-mix(in srgb, #f87171 45%, transparent);
+}
+
+.ticket-kind-dot.is-task {
+  background: #60a5fa;
+  box-shadow: 0 0 5px color-mix(in srgb, #60a5fa 45%, transparent);
+}
+
+/* —— 卡片 ⋯ 菜单 —— */
+.ticket-menu-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.ticket-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+}
+
+.ticket-more {
+  appearance: none;
+  cursor: pointer;
+  width: 34px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--text) 28%, var(--border));
+  background: var(--bg-pane);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.ticket-more:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  color: var(--text);
+}
+
+.ticket-more:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ticket-card-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 25;
+  min-width: 128px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 35%, transparent);
+}
+
+.ticket-card-menu button {
+  appearance: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ticket-card-menu button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 /* 整卡降调：被标记的工单一眼可辨，操作按钮保持可读 */

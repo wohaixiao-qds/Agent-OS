@@ -108,7 +108,21 @@ describe("TicketInbox (API)", () => {
     expect(container.textContent).toContain("航研所项目");
     expect(container.textContent).toContain("IHY-128");
     expect(container.textContent).toContain("交给 CEO");
+    // 队列摘要条可见
+    expect(container.textContent).toContain("待派 1");
+
+    // 次要操作收进 ⋯ 菜单：打开后可见
+    const moreBtn = container.querySelector("button.ticket-more") as HTMLButtonElement | null;
+    expect(moreBtn).toBeTruthy();
+    await act(async () => {
+      moreBtn!.click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(container.textContent).toContain("改状态");
+    expect(container.textContent).toContain("暂不处理");
+    expect(container.textContent).toContain("打开原单");
   });
 
   it("requests issue states when opening change-state picker", async () => {
@@ -122,6 +136,16 @@ describe("TicketInbox (API)", () => {
     });
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const moreBtn = container.querySelector("button.ticket-more") as HTMLButtonElement | null;
+    expect(moreBtn).toBeTruthy();
+
+    await act(async () => {
+      moreBtn!.click();
+    });
+    await act(async () => {
       await Promise.resolve();
     });
 
@@ -159,14 +183,23 @@ describe("TicketInbox (API)", () => {
       await Promise.resolve();
     });
 
-    const holdBtn = Array.from(container.querySelectorAll("button")).find(
+    // 暂不处理收在 ⋯ 菜单里
+    const moreBtn = container.querySelector("button.ticket-more") as HTMLButtonElement | null;
+    expect(moreBtn).toBeTruthy();
+    await act(async () => {
+      moreBtn!.click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const holdItem = Array.from(container.querySelectorAll("button")).find(
       (el) => el.textContent === "暂不处理",
     );
-    expect(holdBtn).toBeTruthy();
+    expect(holdItem).toBeTruthy();
     expect(container.querySelector(".ticket-held-chip")).toBeNull();
 
     await act(async () => {
-      holdBtn!.click();
+      holdItem!.click();
     });
     await act(async () => {
       await Promise.resolve();
@@ -178,16 +211,23 @@ describe("TicketInbox (API)", () => {
       issueKey: "101",
       held: true,
     });
-    // 卡片进入 held 态：徽标 + 按钮翻转为「恢复派单」 + 提示文案
+    // 卡片进入 held 态：徽标 + 左竖条 + 提示文案；菜单项翻转为「恢复派单」
     expect(container.querySelector(".ticket-held-chip")?.textContent).toBe(
       "暂不处理",
     );
     expect(container.querySelector(".ticket-card.is-held")).toBeTruthy();
+    expect(container.textContent).toContain("已标记暂不处理");
+
+    await act(async () => {
+      moreBtn!.click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(
       Array.from(container.querySelectorAll("button")).some(
         (el) => el.textContent === "恢复派单",
       ),
     ).toBe(true);
-    expect(container.textContent).toContain("已标记暂不处理");
   });
 });
