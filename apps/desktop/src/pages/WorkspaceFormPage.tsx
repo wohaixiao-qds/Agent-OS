@@ -89,6 +89,9 @@ export function WorkspaceFormPage() {
         ? await api.updateWorkspace(workspaceId, payload)
         : await api.createWorkspace(payload);
       applyWorkspace(ws);
+      // Sidebar dropdown reads the shell-context list; without this the new
+      // workspace stays invisible until app restart.
+      await refreshAll();
       setStatus("已保存");
       if (isNew) {
         navigate(`/workspaces/${ws.id}`, { replace: true });
