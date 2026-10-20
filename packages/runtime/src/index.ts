@@ -48,6 +48,7 @@ import { ZentaoIntegrationService } from "./services/zentao-integration-service.
 import { AuthService } from "./services/auth-service.js";
 import { attachWebSocket } from "./ws.js";
 import { SkillLibrary } from "./services/skill-install.js";
+import { TicketDispatchStore } from "./services/ticket-dispatches.js";
 
 loadDotEnv();
 
@@ -191,6 +192,16 @@ const ticketService = new TicketService(
   taskBoard,
 );
 const ticketPulls = new TicketPullScheduleService(dataDir, ticketService);
+// 顺序推送：已派单的工单话题一空闲，立即加速下一轮拉单（事件驱动，
+// 不干等轮询间隔）。普通聊天话题空闲不触发。
+botRunService.setTopicIdleHook((topicId) => {
+  void new TicketDispatchStore(dataDir)
+    .topicCast(topicId)
+    .then((cast) => {
+      if (cast !== null) ticketPulls.notifyTopicIdle();
+    })
+    .catch(() => undefined);
+});
 const agentSchedules = new AgentScheduleService(dataDir, {
   listBots: () => botService.list(),
   getWorkspace: (id) => workspaceService.get(id),

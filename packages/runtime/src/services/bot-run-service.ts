@@ -167,6 +167,13 @@ export class BotRunService {
     this.adapterOverride = adapter;
   }
 
+  private topicIdleHook?: (topicId: string) => void;
+
+  /** 话题从运行转入空闲时回调（顺序推送调度用）。 */
+  setTopicIdleHook(hook: (topicId: string) => void): void {
+    this.topicIdleHook = hook;
+  }
+
   private async pickAdapter(botEngine: EngineKind): Promise<CliAdapter> {
     if (this.adapterOverride) return this.adapterOverride;
     const settings = await this.settingsService?.get();
@@ -208,6 +215,11 @@ export class BotRunService {
     });
     if (updated) {
       this.emit?.({ type: "topic.update", topic: updated });
+      if (!busy) {
+        // 话题真正空闲（运行链收尾）。顺序推送调度靠这个钩子
+        // 立即加速下一轮拉单，而不是等下一个轮询周期。
+        this.topicIdleHook?.(topicId);
+      }
     }
   }
 

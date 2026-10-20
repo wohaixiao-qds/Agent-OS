@@ -215,3 +215,64 @@ describe("TicketPullScheduleService", () => {
     expect(tickets.dispatched).toEqual([]);
   });
 });
+
+describe("TicketPullScheduleService sequential push (notifyTopicIdle)", () => {
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function setup(overrides?: Partial<TicketPullPort>) {
+    const dir = await mkdtemp(join(tmpdir(), "zy-aos-pull-"));
+    const tickets = port(overrides);
+    // 10ms 防抖 + 真实定时器：expedite 是含真实 fs IO 的异步链
+    const service = new TicketPullScheduleService(dir, tickets, {
+      idleDebounceMs: 10,
+    });
+    const created = await service.add({
+      provider: "gitee",
+      projectId: "proj",
+      everyHours: 1,
+      priority: "major",
+    });
+    await service.start(created.id, new Date("2026-10-13T09:00:00.000Z"));
+    return { service, tickets };
+  }
+
+  it("expedites the next dispatch right after an idle notification", async () => {
+    const { service, tickets } = await setup();
+    // 未到 nextRunAt（+1h），空闲通知防抖后应立即派出下一张
+    expect(tickets.dispatched).toEqual([]);
+
+    service.notifyTopicIdle();
+    await sleep(200);
+
+    expect(tickets.dispatched).toEqual(["1"]);
+    const [after] = await service.list();
+    expect(after?.lastResult).toContain("派出 1 张（A）");
+  });
+
+  it("idle expedite still respects the in-progress backstop", async () => {
+    const { service, tickets } = await setup({
+      inProgressDispatches: async () => [
+        { ident: "A", topicId: "topic-9" },
+      ],
+    });
+
+    service.notifyTopicIdle();
+    await sleep(200);
+
+    // 接力间隙等假空闲不误派，走既有「本轮跳过 + 5 分钟复查」
+    expect(tickets.dispatched).toEqual([]);
+    const [after] = await service.list();
+    expect(after?.lastResult).toContain("本轮跳过");
+  });
+
+  it("debounces idle bursts into one pull", async () => {
+    const { service, tickets } = await setup();
+
+    service.notifyTopicIdle();
+    service.notifyTopicIdle();
+    service.notifyTopicIdle();
+    await sleep(200);
+
+    expect(tickets.dispatched).toEqual(["1"]);
+  });
+});

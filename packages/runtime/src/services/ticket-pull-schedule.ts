@@ -62,11 +62,17 @@ export class TicketPullScheduleService {
   private loaded = false;
   private timer: ReturnType<typeof setInterval> | undefined;
   private running = new Set<string>();
+  private idleTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastExpediteAt = 0;
+  private readonly idleDebounceMs: number;
 
   constructor(
     private readonly dataDir: string,
     private readonly tickets: TicketPullPort,
-  ) {}
+    options?: { idleDebounceMs?: number },
+  ) {
+    this.idleDebounceMs = options?.idleDebounceMs ?? 5_000;
+  }
 
   startLoop(): void {
     if (this.timer) return;
@@ -80,6 +86,39 @@ export class TicketPullScheduleService {
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = undefined;
+  }
+
+  /**
+   * 顺序推送：已派工单的话题一空闲就尽快派下一张。防抖 5 秒合并
+   * 接力间隙与连发空闲，30 秒底噪防止风暴；真正的「仍在处理中」
+   * 复查在 pull 内部兜底（接力间隙不会误派）。
+   */
+  notifyTopicIdle(): void {
+    if (this.idleTimer) return;
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = undefined;
+      void this.expedite();
+    }, this.idleDebounceMs);
+    this.idleTimer.unref?.();
+  }
+
+  private async expedite(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastExpediteAt < 30_000) return;
+    this.lastExpediteAt = now;
+    await this.ensure();
+    let touched = false;
+    for (const task of this.tasks) {
+      if (task.status !== "active") continue;
+      if (task.nextRunAt && new Date(task.nextRunAt).getTime() > now) {
+        task.nextRunAt = new Date(now).toISOString();
+        touched = true;
+      }
+    }
+    if (touched) await this.save();
+    await this.tick(now);
   }
 
   async list(): Promise<TicketPullTask[]> {
