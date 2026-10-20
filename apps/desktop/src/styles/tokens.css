@@ -2,6 +2,8 @@
 
 :root,
 [data-theme="dark"] {
+  /* 原生部件（select 弹层、滚动条等）跟随暗色，与 CSS 变量皮肤同步 */
+  color-scheme: dark;
   --bg-app: #0f1115;
   --bg-pane: #161a22;
   --bg-elevated: #1c212b;
@@ -28,6 +30,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --bg-app: #f5f6f7;
   --bg-pane: #ffffff;
   --bg-elevated: #f5f6f7;
@@ -43,6 +46,7 @@
 }
 
 [data-theme="warm"] {
+  color-scheme: light;
   --bg-app: #faf7f2;
   --bg-pane: #fffdfb;
   --bg-elevated: #f3ede4;
