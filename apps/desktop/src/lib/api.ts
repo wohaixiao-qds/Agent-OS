@@ -18,7 +18,8 @@ import type {
   TicketIssueStateUpdate,
 } from "../components/tickets/board-types";
 
-const BASE_URL = "http://127.0.0.1:17890";
+export const RUNTIME_BASE_URL = "http://127.0.0.1:17890";
+const BASE_URL = RUNTIME_BASE_URL;
 
 export type TicketPullPriority = "severe" | "major" | "none";
 
@@ -53,6 +54,41 @@ export type AgentScheduleTask = {
 
 let authToken: string | null =
   typeof window !== "undefined" ? localStorage.getItem("zy_aos_token") : null;
+
+export type UploadedAttachment = {
+  fileName: string;
+  path: string;
+  url: string;
+};
+
+function extractErrorMessage(text: string, fallback: string): string {
+  try {
+    const body = JSON.parse(text) as { error?: unknown };
+    if (typeof body.error === "string" && body.error.trim()) {
+      return body.error;
+    }
+  } catch {
+    // keep raw text when body is not JSON
+  }
+  return text || fallback;
+}
+
+/** 聊天图片上传：粘贴/拖拽的图片存到 runtime，返回可引用的 URL 与本地路径。 */
+async function uploadAttachment(file: File): Promise<UploadedAttachment> {
+  const res = await fetch(
+    `${BASE_URL}/api/attachments?name=${encodeURIComponent(file.name || "image.png")}`,
+    {
+      method: "POST",
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+      body: file,
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(extractErrorMessage(text, "图片上传失败"));
+  }
+  return (await res.json()) as UploadedAttachment;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
@@ -611,6 +647,8 @@ export const api = {
       }),
     });
   },
+
+  uploadAttachment,
 
   listTicketIssueStates(
     provider: TicketProviderId,

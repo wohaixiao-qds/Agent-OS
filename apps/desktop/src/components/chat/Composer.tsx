@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BotConfig } from "@zy-aos/shared";
+import { api, RUNTIME_BASE_URL } from "../../lib/api";
 import { IconArrowUp, IconAt, IconChevronDown } from "../shell/icons";
+
+type PendingImage = {
+  id: string;
+  file: File;
+  preview: string;
+};
 
 type ComposerProps = {
   bots: BotConfig[];
@@ -23,8 +30,42 @@ export function Composer({
   const [filter, setFilter] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const footerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    return () => {
+      for (const image of pendingImages) URL.revokeObjectURL(image.preview);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function addImages(files: FileList | File[] | null) {
+    const images = Array.from(files ?? []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (images.length === 0) return;
+    setPendingImages((prev) => [
+      ...prev,
+      ...images.map((file, index) => ({
+        id: `${Date.now()}-${index}-${file.name}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ]);
+    textareaRef.current?.focus();
+  }
+
+  function removeImage(id: string) {
+    setPendingImages((prev) => {
+      const target = prev.find((image) => image.id === id);
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((image) => image.id !== id);
+    });
+  }
 
   useEffect(() => {
     const footer = footerRef.current;
@@ -106,10 +147,32 @@ export function Composer({
     }
   }
 
-  function handleSend() {
-    const content = text.trim();
-    if (!content || disabled || sending) return;
+  async function handleSend() {
+    const base = text.trim();
+    if ((!base && pendingImages.length === 0) || disabled || sending || uploading) {
+      return;
+    }
+    // 先把图片传到 runtime，消息里带上可渲染的 URL 和 agent 可读的本地路径
+    let content = base;
+    if (pendingImages.length > 0) {
+      setUploading(true);
+      try {
+        for (const image of pendingImages) {
+          const uploaded = await api.uploadAttachment(image.file);
+          content += `\n\n![${image.file.name}](${RUNTIME_BASE_URL}${uploaded.url})\n（图片本地路径：${uploaded.path}，可用 Read 工具查看）`;
+        }
+      } catch (error) {
+        setUploading(false);
+        window.alert(
+          error instanceof Error ? error.message : "图片上传失败，请重试",
+        );
+        return;
+      }
+      setUploading(false);
+    }
     onSend(content, mentionBotId);
+    for (const image of pendingImages) URL.revokeObjectURL(image.preview);
+    setPendingImages([]);
     setText("");
     // Mentions are one-shot: clear after send so the chip does not linger.
     setMentionBotId(undefined);
@@ -119,7 +182,36 @@ export function Composer({
 
   return (
     <footer className="composer" ref={footerRef}>
-      <div className="composer-box">
+      <div
+        className={dragOver ? "composer-box is-dragover" : "composer-box"}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          addImages(e.dataTransfer?.files ?? null);
+        }}
+      >
+        {pendingImages.length > 0 ? (
+          <div className="composer-images" aria-label="待发送图片">
+            {pendingImages.map((image) => (
+              <span key={image.id} className="composer-image-chip">
+                <img src={image.preview} alt={image.file.name} />
+                <button
+                  type="button"
+                  aria-label={`移除 ${image.file.name}`}
+                  onClick={() => removeImage(image.id)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         {mentioned ? (
           <div className="mention-chip-row">
             <span className="mention-chip">
@@ -162,11 +254,18 @@ export function Composer({
         <textarea
           ref={textareaRef}
           rows={1}
-          placeholder="随心输入，默认交给 CEO 助理；@ 指定智能体；@Bot /compact 可整理上下文…"
+          placeholder="随心输入，默认交给 CEO 助理；@ 指定智能体；可直接粘贴或拖入图片…"
           aria-label="输入框"
           value={text}
           disabled={disabled}
           onChange={(e) => handleChange(e.target.value)}
+          onPaste={(e) => {
+            const files = e.clipboardData?.files;
+            if (files && files.length > 0) {
+              e.preventDefault();
+              addImages(files);
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
@@ -240,9 +339,11 @@ export function Composer({
           <button
             type="button"
             className="composer-send"
-            disabled={disabled || sending || !text.trim()}
+            disabled={
+              disabled || sending || uploading || (!text.trim() && pendingImages.length === 0)
+            }
             onClick={handleSend}
-            aria-label={sending ? "发送中" : "发送"}
+            aria-label={sending || uploading ? "发送中" : "发送"}
             title="发送"
           >
             <IconArrowUp />

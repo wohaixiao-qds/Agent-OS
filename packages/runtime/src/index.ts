@@ -49,6 +49,7 @@ import { AuthService } from "./services/auth-service.js";
 import { attachWebSocket } from "./ws.js";
 import { SkillLibrary } from "./services/skill-install.js";
 import { TicketDispatchStore } from "./services/ticket-dispatches.js";
+import { registerAttachmentRoutes } from "./routes/attachments.js";
 
 loadDotEnv();
 
@@ -231,6 +232,7 @@ registerControlRoutes(router, appControl, schedules, dataDir);
 registerDialogRoutes(router);
 registerAuthRoutes(router, authService);
 registerBoardRoutes(router, taskBoard);
+registerAttachmentRoutes(router, dataDir);
 registerTicketRoutes(router, ticketService);
 registerTicketPullRoutes(router, ticketPulls);
 registerAgentScheduleRoutes(router, agentSchedules);
