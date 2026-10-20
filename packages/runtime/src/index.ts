@@ -115,6 +115,18 @@ const chatService = new ChatService(
 const mockAutoAdvanceMs =
   process.env.ZY_AOS_MOCK_PIPELINE_TIMER === "1" ? 5000 : undefined;
 const taskBoard = new TaskBoardService(dataDir);
+// 启动自愈：运行随进程消失——删掉指向已删话题的看板行，
+// 把上个会话残留的 running 行标记为失败，看板不留幽灵行。
+void (async () => {
+  try {
+    const state = await store.load();
+    await taskBoard.recoverStaleRuns(
+      new Set(state.topics.map((topic) => topic.id)),
+    );
+  } catch {
+    // 看板清理失败不阻塞启动
+  }
+})();
 const pipelineService = new PipelineService(
   store,
   broadcast,

@@ -381,6 +381,53 @@ describe("TicketService board + state APIs", () => {
     expect(list[0]?.topicId).toBeUndefined();
   });
 
+  it("recoverStaleRuns drops ghost-topic rows and interrupts stale running rows", async () => {
+    const now = new Date().toISOString();
+    const liveId = "live-board-topic";
+    await store.transact(async (s) => {
+      s.topics.push({
+        id: liveId,
+        workspaceId: "ws-1",
+        title: "live",
+        createdAt: now,
+        pipelineStage: "idle",
+      });
+    });
+    await taskBoard.upsert({
+      id: "ghost-row",
+      title: "ghost",
+      status: "running",
+      source: "pipeline",
+      topicId: "deleted-topic",
+      createdAt: now,
+    });
+    await taskBoard.upsert({
+      id: "stale-row",
+      title: "stale",
+      status: "running",
+      source: "pipeline",
+      topicId: liveId,
+      createdAt: now,
+    });
+    await taskBoard.upsert({
+      id: "done-row",
+      title: "done",
+      status: "completed",
+      source: "pipeline",
+      createdAt: now,
+    });
+
+    await taskBoard.recoverStaleRuns(new Set([liveId]));
+
+    const rows = await taskBoard.list();
+    // 话题已删 → 整行删除
+    expect(rows.find((r) => r.id === "ghost-row")).toBeUndefined();
+    // 话题还在但运行已随进程消失 → 标记失败，不留 running 幽灵行
+    expect(rows.find((r) => r.id === "stale-row")?.status).toBe("failed");
+    // 历史完成行不受影响
+    expect(rows.find((r) => r.id === "done-row")?.status).toBe("completed");
+  });
+
   it("listIssueStates requires issueTypeId then lists type states", async () => {
     getIssueDetail.mockResolvedValue(fakeDetail({ issueTypeId: undefined }));
     await expect(

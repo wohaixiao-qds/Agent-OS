@@ -413,6 +413,28 @@ export class TaskBoardService {
     });
   }
 
+  /**
+   * Startup recovery: runs die with the process. Drop rows bound to topics
+   * deleted while offline, and interrupt rows still marked running from a
+   * previous session so the board has no ghost rows.
+   */
+  async recoverStaleRuns(existingTopicIds: Set<string>): Promise<void> {
+    await this.transact((tasks) => {
+      const next = tasks.filter(
+        (task) => !(task.topicId && !existingTopicIds.has(task.topicId)),
+      );
+      const now = new Date().toISOString();
+      for (const task of next) {
+        if (task.status !== "running") continue;
+        task.status = "failed";
+        task.failureReason = "unknown";
+        task.updatedAt = now;
+      }
+      tasks.length = 0;
+      tasks.push(...next);
+    });
+  }
+
   async findByExternalIssue(
     provider: TicketProviderId,
     issueIdent: string,

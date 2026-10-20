@@ -35,7 +35,8 @@
     ],
     "resources": [
       "resources/runtime/**/*",
-      "resources/node/**/*"
+      "resources/node/**/*",
+      "resources/skills/**/*"
     ],
     "windows": {
       "nsis": {

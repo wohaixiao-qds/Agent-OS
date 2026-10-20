@@ -1,4 +1,5 @@
 import { mkdir, readdir, readFile, writeFile, access } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { constants } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,8 +40,15 @@ async function copySkillDir(srcDir: string, destDir: string): Promise<void> {
 
 /** Bundled default skills shipped with @zy-aos/runtime (agent-os aligned). */
 export function bundledSkillsRoot(): string {
-  // src/services → ../../skills ; dist/services → ../../skills
-  return join(fileURLToPath(new URL("../..", import.meta.url)), "skills");
+  // tsx 源码：src/services → <runtime>/skills；
+  // esbuild 产物是扁平的 dist/index.js（没有 dist/services），安装包内是
+  // resources/runtime/index.js —— 两者都取同级的 ../skills。
+  const here = fileURLToPath(new URL(".", import.meta.url));
+  const candidates = [
+    join(here, "..", "..", "skills"),
+    join(here, "..", "skills"),
+  ];
+  return candidates.find((root) => existsSync(root)) ?? candidates[0]!;
 }
 
 /**

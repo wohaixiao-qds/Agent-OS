@@ -8,6 +8,7 @@ import { createWriteStream } from "node:fs";
 import {
   chmod,
   copyFile,
+  cp,
   mkdir,
   readdir,
   rm,
@@ -182,7 +183,14 @@ async function copyRuntimeResources() {
     join(runtimeOut, "app-tools-server.js"),
   );
   await copyFile(join(dist, "package.json"), join(runtimeOut, "package.json"));
+  // 内置 Skills：打包后的 runtime 按 `resources/skills` 相对定位
+  // （skill-seed.ts 的 bundledSkillsRoot = 模块位置 ../../skills）。
+  const skillsSrc = join(repoRoot, "packages", "runtime", "skills");
+  const skillsOut = join(resourcesRoot, "skills");
+  await rm(skillsOut, { recursive: true, force: true });
+  await cp(skillsSrc, skillsOut, { recursive: true });
   console.log(`runtime resources -> ${runtimeOut}`);
+  console.log(`bundled skills -> ${skillsOut}`);
 }
 
 async function main() {

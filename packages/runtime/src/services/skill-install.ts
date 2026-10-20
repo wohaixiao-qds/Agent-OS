@@ -18,7 +18,13 @@ export function npxSkillsAdd(spec: string): Promise<void> {
     execFile(
       command,
       ["--yes", "skills", "add", spec, "-g", "-y"],
-      { timeout: 120_000, windowsHide: true },
+      {
+        timeout: 120_000,
+        windowsHide: true,
+        // Node ≥18.20/20.12/22 在 Windows 上无 shell 直接 spawn .cmd 会抛
+        // EINVAL（CVE-2024-27980 加固），npx.cmd 必须走 shell。
+        shell: process.platform === "win32",
+      },
       (error, _stdout, stderr) => {
         if (!error) {
           resolve();
