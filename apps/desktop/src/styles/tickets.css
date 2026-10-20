@@ -348,7 +348,7 @@
   border-radius: 12px;
   /* 左侧状态竖条常驻占位，避免有无竖条时内容抖动 */
   border: 1px solid var(--border);
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
   background:
     linear-gradient(
       135deg,
@@ -521,9 +521,16 @@
   animation: ticket-rail-pulse 2.4s ease-in-out infinite;
 }
 
+/* 呼吸谷值保持 65% 透明度并带左侧辉光：2px/40% 的旧参数半个周期几乎不可见 */
 @keyframes ticket-rail-pulse {
+  0%,
+  100% {
+    border-left-color: var(--accent);
+    box-shadow: -3px 0 12px -3px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
   50% {
-    border-left-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    border-left-color: color-mix(in srgb, var(--accent) 65%, transparent);
+    box-shadow: -3px 0 3px -4px color-mix(in srgb, var(--accent) 15%, transparent);
   }
 }
 
