@@ -111,6 +111,9 @@ export class ChatService {
       topicId: topic.id,
       pipelineStage: topic.pipelineStage,
     });
+    // 新话题立即广播 topic.update：后台创建（定时拉单派单）时，
+    // 前端靠这个事件把话题加进侧边栏列表。
+    this.emit?.({ type: "topic.update", topic });
 
     return topic;
   }

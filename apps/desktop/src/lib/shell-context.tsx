@@ -122,6 +122,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
 
   const selectedTopicIdRef = useRef(selectedTopicId);
   selectedTopicIdRef.current = selectedTopicId;
+  const workspaceIdRef = useRef(workspaceId);
+  workspaceIdRef.current = workspaceId;
 
   const upsertMessage = useCallback((message: ChatMessage) => {
     setMessages((prev) => {
@@ -301,9 +303,20 @@ export function ShellProvider({ children }: { children: ReactNode }) {
         }
 
         if (event.type === "topic.update") {
-          setTopics((prev) =>
-            prev.map((t) => (t.id === event.topic.id ? event.topic : t)),
-          );
+          setTopics((prev) => {
+            if (prev.some((t) => t.id === event.topic.id)) {
+              return prev.map((t) =>
+                t.id === event.topic.id ? event.topic : t,
+              );
+            }
+            // 后台创建的话题（定时拉单派单等）：属于当前工作区则直接进列表，
+            // 否则留在别的工作区，切换过去时自然会拉到。
+            const scope = workspaceIdRef.current;
+            if (!scope || event.topic.workspaceId === scope) {
+              return [event.topic, ...prev];
+            }
+            return prev;
+          });
           return;
         }
 
