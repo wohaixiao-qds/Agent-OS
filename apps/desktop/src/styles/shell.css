@@ -1039,6 +1039,7 @@
   max-height: 260px;
   border-radius: 10px;
   display: block;
+  cursor: zoom-in;
 }
 
 .msg-bot .msg-col {

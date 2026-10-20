@@ -5,6 +5,7 @@ import { botTone } from "../../lib/bot-style";
 import { ClarificationCard } from "./ClarificationCard";
 import { DispatchCard, TicketIntakeCard } from "./LarkCard";
 import { MarkdownBody } from "./MarkdownBody";
+import { TicketImageLightbox } from "../tickets/TicketImageLightbox";
 import { RunCard } from "./RunCard";
 import { AppToolCard, type ControlDecision } from "./AppToolCard";
 import { providerLabel, ticketIntakeView } from "./ticket-intake";
@@ -102,6 +103,10 @@ export function MessageList({
   // 用 state 而不是 ref 承载内层节点：话题为空时走提前 return，内层不渲染，
   // observer effect 必须等内层真正挂载后才运行（ref 变化不触发 effect）。
   const [contentEl, setContentEl] = useState<HTMLDivElement | null>(null);
+  // 聊天图片点击放大：记录当前消息内的图片列表与点击位置
+  const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(
+    null,
+  );
   const stickToBottomRef = useRef(true);
   // 最近一次程序贴底的时间：紧随其后的 scroll 事件不参与用户意图判定
   const lastPinAtRef = useRef(0);
@@ -198,7 +203,27 @@ export function MessageList({
         ref={timelineRef}
         onScroll={handleScroll}
       >
-        <div className="timeline-inner" ref={setContentEl}>
+        <div
+          className="timeline-inner"
+          ref={setContentEl}
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (target.tagName !== "IMG") return;
+            const img = target as HTMLImageElement;
+            if (!img.src) return;
+            // 同一条消息里的图片串成一组，可在灯箱里左右切换
+            const body = img.closest(".md-body");
+            const urls = body
+              ? Array.from(body.querySelectorAll("img")).map(
+                  (el) => (el as HTMLImageElement).src,
+                )
+              : [img.src];
+            setLightbox({
+              urls,
+              index: Math.max(0, urls.indexOf(img.src)),
+            });
+          }}
+        >
         {messages.map((msg) => {
         const meta = authorLabel(msg, bots);
         const isYou = msg.author === "user";
@@ -321,6 +346,16 @@ export function MessageList({
         })}
         </div>
       </div>
+      {lightbox ? (
+        <TicketImageLightbox
+          urls={lightbox.urls}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onIndexChange={(index) =>
+            setLightbox((cur) => (cur ? { ...cur, index } : cur))
+          }
+        />
+      ) : null}
       {showJump ? (
         <button
           type="button"
