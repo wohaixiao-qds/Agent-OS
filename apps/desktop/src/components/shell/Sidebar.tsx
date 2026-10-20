@@ -10,14 +10,10 @@ function topicStatus(
   hasPending: boolean,
 ): "running" | "needs_you" | "idle" {
   if (hasPending) return "needs_you";
-  if (
-    topic.busy ||
-    topic.pipelineStage === "developing" ||
-    topic.pipelineStage === "testing" ||
-    topic.pipelineStage === "reviewing"
-  ) {
-    return "running";
-  }
+  // Running = a live CLI run only. pipelineStage is sticky: aborted or
+  // gate-paused pipelines freeze mid-stage forever, so treating
+  // developing/testing/reviewing as "running" spins the icon endlessly.
+  if (topic.busy) return "running";
   return "idle";
 }
 
