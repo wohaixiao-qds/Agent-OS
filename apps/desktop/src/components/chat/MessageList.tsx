@@ -263,9 +263,20 @@ export function MessageList({
           }
         }
         if (isYou) {
+          // 隐藏给 agent 的路径提示行；带图片的消息走 Markdown 渲染出图
+          const visible = msg.content
+            .replace(/\n?（图片本地路径：[^\n]*）\n?/g, "\n")
+            .trim();
+          const hasImage = /!\[[^\]]*\]\([^)]+\)/.test(visible);
           return (
             <article key={msg.id} className="msg msg-you">
-              <div className="msg-bubble">{msg.content}</div>
+              <div
+                className={
+                  hasImage ? "msg-bubble has-image" : "msg-bubble"
+                }
+              >
+                {hasImage ? <MarkdownBody content={visible} /> : msg.content}
+              </div>
               <span className="msg-time">我 · {formatTime(msg.createdAt)}</span>
             </article>
           );

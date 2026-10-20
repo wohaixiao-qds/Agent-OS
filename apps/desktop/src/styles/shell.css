@@ -1028,6 +1028,19 @@
   white-space: pre-wrap;
 }
 
+/* 带图消息走 Markdown 渲染：去掉 pre-wrap，图片限尺寸圆角 */
+.msg-bubble.has-image {
+  white-space: normal;
+  max-width: min(420px, 100%);
+}
+
+.md-body img {
+  max-width: min(360px, 100%);
+  max-height: 260px;
+  border-radius: 10px;
+  display: block;
+}
+
 .msg-bot .msg-col {
   display: flex;
   flex-direction: column;
