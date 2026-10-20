@@ -585,9 +585,13 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                   return (
                     <li
                       key={ticket.key}
-                      className={
-                        active ? "ticket-card is-active" : "ticket-card"
-                      }
+                      className={[
+                        "ticket-card",
+                        active ? "is-active" : "",
+                        ticket.held ? "is-held" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       style={{ animationDelay: `${80 + index * 45}ms` }}
                     >
                       <button

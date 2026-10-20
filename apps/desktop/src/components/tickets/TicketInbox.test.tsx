@@ -63,6 +63,7 @@ vi.mock("../../lib/api", () => ({
     })),
     updateTicketProject: vi.fn(),
     dispatchTicket: vi.fn(),
+    setTicketHold: vi.fn(async () => ({ held: true })),
     listWorkspaces: vi.fn(async () => []),
     listTicketIssueStates: vi.fn(async () => [
       { id: 1, title: "待办" },
@@ -142,5 +143,51 @@ describe("TicketInbox (API)", () => {
       "101",
     );
     expect(container.textContent).toContain("完成");
+  });
+
+  it("hold toggle flips the ticket into a visibly held state", async () => {
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <TicketInbox onCollapse={vi.fn()} />
+        </MemoryRouter>,
+      );
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const holdBtn = Array.from(container.querySelectorAll("button")).find(
+      (el) => el.textContent === "暂不处理",
+    );
+    expect(holdBtn).toBeTruthy();
+    expect(container.querySelector(".ticket-held-chip")).toBeNull();
+
+    await act(async () => {
+      holdBtn!.click();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(api.setTicketHold).toHaveBeenCalledWith({
+      provider: "gitee",
+      projectId: "hangyan",
+      issueKey: "101",
+      held: true,
+    });
+    // 卡片进入 held 态：徽标 + 按钮翻转为「恢复派单」 + 提示文案
+    expect(container.querySelector(".ticket-held-chip")?.textContent).toBe(
+      "暂不处理",
+    );
+    expect(container.querySelector(".ticket-card.is-held")).toBeTruthy();
+    expect(
+      Array.from(container.querySelectorAll("button")).some(
+        (el) => el.textContent === "恢复派单",
+      ),
+    ).toBe(true);
+    expect(container.textContent).toContain("已标记暂不处理");
   });
 });

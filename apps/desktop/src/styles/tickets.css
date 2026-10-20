@@ -477,6 +477,15 @@
   border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
 }
 
+/* 整卡降调：被标记的工单一眼可辨，操作按钮保持可读 */
+.ticket-card.is-held .ticket-card-main {
+  opacity: 0.66;
+}
+
+.ticket-card.is-held .ticket-card-title {
+  color: var(--text-muted);
+}
+
 .ticket-card-title {
   margin: 0;
   font-size: 13px;
