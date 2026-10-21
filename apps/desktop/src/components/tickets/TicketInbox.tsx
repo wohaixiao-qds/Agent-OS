@@ -70,6 +70,21 @@ function toDetail(
 
 const PROVIDER_STORAGE_KEY = "zy-aos:tickets:provider";
 
+/**
+ * 工单是否已完成：流水线走到 completed，或工单系统侧已是终态
+ * （已解决/已关闭/已完成/已拒绝）。直接协作链不经过流水线，
+ * 终态只能看工单系统状态。
+ */
+export function isTicketDone(ticket: {
+  pipelineStage?: string;
+  stateTitle?: string;
+}): boolean {
+  if (ticket.pipelineStage === "completed") return true;
+  const state = (ticket.stateTitle ?? "").trim();
+  if (!state || state === "未完成") return false;
+  return /已解决|已关闭|已完成|已拒绝|resolved|closed|done/i.test(state);
+}
+
 function readStoredProviderId(): TicketProviderId | null {
   try {
     const value = localStorage.getItem(PROVIDER_STORAGE_KEY);
@@ -179,7 +194,9 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
 
   const project = projects.find((p) => p.id === projectId) ?? null;
 
-  // 队列口径：暂不处理优先归 held；已派未完成 = 处理中；完成/阻塞单列
+  // 队列口径：暂不处理优先归 held；终态（流水线完成或工单系统状态已解决/
+  // 关闭——直接协作链不走流水线，唯一可靠的完成信号在工单系统侧）归已完成；
+  // 其余已派未完成 = 处理中。
   const queue = useMemo(() => {
     let pending = 0;
     let active = 0;
@@ -187,7 +204,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
     let held = 0;
     for (const t of tickets) {
       if (t.held) held++;
-      else if (t.pipelineStage === "completed") done++;
+      else if (isTicketDone(t)) done++;
       else if (t.topicId) active++;
       else pending++;
     }
@@ -200,8 +217,8 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
       if (queueFilter === "held") return Boolean(t.held);
       if (queueFilter === "pending") return !t.topicId && !t.held;
       if (queueFilter === "active")
-        return Boolean(t.topicId) && t.pipelineStage !== "completed" && !t.held;
-      return t.pipelineStage === "completed" && !t.held;
+        return Boolean(t.topicId) && !isTicketDone(t) && !t.held;
+      return isTicketDone(t) && !t.held;
     });
   }, [tickets, queueFilter]);
 
@@ -673,7 +690,7 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                   // 左侧状态竖条：处理中呼吸、暂不处理琥珀、完成绿、阻塞红
                   const rail = ticket.held
                     ? "is-held"
-                    : ticket.pipelineStage === "completed"
+                    : isTicketDone(ticket)
                       ? "is-done"
                       : ticket.pipelineStage === "blocked"
                         ? "is-blocked"

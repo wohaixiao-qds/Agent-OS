@@ -232,4 +232,55 @@ describe("TicketInbox (API)", () => {
       ),
     ).toBe(true);
   });
+
+  it("dispatched ticket with terminal provider state counts as done", async () => {
+    vi.mocked(api.listTicketTodos).mockResolvedValueOnce([
+      {
+        key: "101",
+        id: 101,
+        ident: "IHY-128",
+        title: "还在处理的单子",
+        stateTitle: "处理中",
+        sprintTitle: "Sprint 12",
+        programId: "818309",
+        url: "https://example.com",
+        priority: "主要",
+        priorityRank: 10,
+        topicId: "topic-1",
+        pipelineStage: "idle",
+      },
+      {
+        key: "102",
+        id: 102,
+        ident: "IHY-129",
+        title: "禅道已解决的单子",
+        stateTitle: "已解决",
+        sprintTitle: "Sprint 12",
+        programId: "818309",
+        url: "https://example.com",
+        priority: "主要",
+        priorityRank: 10,
+        topicId: "topic-2",
+        pipelineStage: "idle",
+      },
+    ]);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <TicketInbox onCollapse={vi.fn()} />
+        </MemoryRouter>,
+      );
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // 直接协作链不走流水线：完成信号取工单系统状态，不再误报「处理中」
+    expect(container.textContent).toContain("处理中 1");
+    expect(container.textContent).toContain("已完成 1");
+    expect(container.querySelectorAll(".ticket-card.is-done")).toHaveLength(1);
+    expect(container.querySelectorAll(".ticket-card.is-running")).toHaveLength(1);
+  });
 });
