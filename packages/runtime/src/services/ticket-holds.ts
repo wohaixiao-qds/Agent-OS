@@ -3,23 +3,28 @@ import { dirname, resolve } from "node:path";
 import type { TicketProviderId } from "../tickets/provider.js";
 import { dispatchKey } from "./ticket-dispatches.js";
 
-interface HoldEntry {
+interface FlagEntry {
   at: string;
+  /** Marked from this topic (used to clean up when the topic is deleted). */
+  topicId?: string;
 }
 
 /**
- * Manual「暂不处理」holds (`ticket-holds.json`, keyed by
- * `{provider}:{issueKey}` — same key format as dispatch records).
- * Held tickets are skipped by auto dispatch until manually released.
+ * Per-ticket manual flags stored as a keyed JSON file (`{provider}:{issueKey}`,
+ * same key format as dispatch records). Backs「暂不处理」holds and manual
+ *「已完成」completions; each instance owns one file.
  */
-export class TicketHoldStore {
-  constructor(private readonly dataDir: string) {}
+export class TicketFlagStore {
+  constructor(
+    private readonly dataDir: string,
+    private readonly fileName: string,
+  ) {}
 
   private storePath(): string {
-    return resolve(this.dataDir, "ticket-holds.json");
+    return resolve(this.dataDir, this.fileName);
   }
 
-  private async loadAll(): Promise<Map<string, HoldEntry>> {
+  private async loadAll(): Promise<Map<string, FlagEntry>> {
     let raw: unknown;
     try {
       raw = JSON.parse(await readFile(this.storePath(), "utf8")) as unknown;
@@ -31,29 +36,36 @@ export class TicketHoldStore {
     }
     const byKey =
       typeof raw === "object" && raw !== null && "byKey" in raw
-        ? ((raw as { byKey?: Record<string, HoldEntry> }).byKey ?? {})
+        ? ((raw as { byKey?: Record<string, FlagEntry> }).byKey ?? {})
         : {};
-    const map = new Map<string, HoldEntry>();
+    const map = new Map<string, FlagEntry>();
     for (const [key, value] of Object.entries(byKey)) {
       if (typeof value?.at === "string") {
-        map.set(key, { at: value.at });
+        map.set(key, { at: value.at, topicId: value.topicId });
       }
     }
     return map;
   }
 
-  async heldKeys(): Promise<Set<string>> {
+  async keys(): Promise<Set<string>> {
     const all = await this.loadAll();
     return new Set(all.keys());
   }
 
-  async hold(provider: TicketProviderId, issueKey: string): Promise<void> {
+  async mark(
+    provider: TicketProviderId,
+    issueKey: string,
+    topicId?: string,
+  ): Promise<void> {
     const all = await this.loadAll();
-    all.set(dispatchKey(provider, issueKey), { at: new Date().toISOString() });
+    all.set(dispatchKey(provider, issueKey), {
+      at: new Date().toISOString(),
+      topicId,
+    });
     await this.persist(all);
   }
 
-  async release(provider: TicketProviderId, issueKey: string): Promise<boolean> {
+  async unmark(provider: TicketProviderId, issueKey: string): Promise<boolean> {
     const all = await this.loadAll();
     const existed = all.delete(dispatchKey(provider, issueKey));
     if (existed) {
@@ -62,8 +74,24 @@ export class TicketHoldStore {
     return existed;
   }
 
-  private async persist(all: Map<string, HoldEntry>): Promise<void> {
-    const byKey: Record<string, HoldEntry> = {};
+  /** Remove entries bound to a deleted topic; returns removed keys. */
+  async removeByTopicId(topicId: string): Promise<string[]> {
+    const all = await this.loadAll();
+    const removed: string[] = [];
+    for (const [key, entry] of all) {
+      if (entry.topicId === topicId) {
+        all.delete(key);
+        removed.push(key);
+      }
+    }
+    if (removed.length > 0) {
+      await this.persist(all);
+    }
+    return removed;
+  }
+
+  private async persist(all: Map<string, FlagEntry>): Promise<void> {
+    const byKey: Record<string, FlagEntry> = {};
     for (const [key, value] of all) {
       byKey[key] = value;
     }

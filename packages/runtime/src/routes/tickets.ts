@@ -227,4 +227,34 @@ export function registerTicketRoutes(
       sendError(res, statusFor(message), message);
     }
   });
+
+  router.post("/api/tickets/:provider/done", async (req, res, params) => {
+    try {
+      const body = await readJsonBody<{
+        projectId?: string;
+        issueKey?: string;
+        done?: boolean;
+        topicId?: string;
+      }>(req);
+      if (!body.projectId?.trim() || !body.issueKey?.trim()) {
+        sendError(res, 400, "projectId 与 issueKey 必填");
+        return;
+      }
+      if (typeof body.done !== "boolean") {
+        sendError(res, 400, "done 必须是布尔值");
+        return;
+      }
+      const result = await service.completeTicket({
+        provider: providerParam(params.provider),
+        projectId: body.projectId.trim(),
+        issueKey: body.issueKey.trim(),
+        done: body.done,
+        topicId: body.topicId,
+      });
+      sendJson(res, 200, result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bad request";
+      sendError(res, statusFor(message), message);
+    }
+  });
 }

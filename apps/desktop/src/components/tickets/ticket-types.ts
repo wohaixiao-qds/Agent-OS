@@ -50,6 +50,8 @@ export interface TicketItem {
   pipelineStage?: TicketPipelineStage;
   /** 手动「暂不处理」：自动派单跳过，直到手工恢复。 */
   held?: boolean;
+  /** 手动「已完成」：工单系统未回写终态时的本地结案标记。 */
+  done?: boolean;
 }
 
 export interface TicketDetail extends TicketItem {

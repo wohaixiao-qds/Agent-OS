@@ -343,6 +343,62 @@ describe("TicketService board + state APIs", () => {
     expect(list[0]?.held).toBeUndefined();
   });
 
+  it("manual completion marks done and dispatch clears it", async () => {
+    const { listMyTodoIssues } = (await import("../gitee/client.js")) as {
+      listMyTodoIssues: ReturnType<typeof vi.fn>;
+    };
+    const todoRow = {
+      id: 42,
+      ident: "TEST-42",
+      title: "issue TEST-42",
+      stateTitle: "激活",
+      sprintTitle: "",
+      programId: "818309",
+      url: "https://gitee.com/i",
+      priority: "主要",
+      priorityRank: 20,
+    };
+    listMyTodoIssues.mockResolvedValue([todoRow]);
+
+    await ticketService.completeTicket({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+      done: true,
+      topicId: "topic-x",
+    });
+    let list = await ticketService.listTodos("gitee", "818309");
+    // 工单系统还是「激活」，但手动结案标记要透出
+    expect(list[0]?.done).toBe(true);
+
+    await ticketService.completeTicket({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+      done: false,
+    });
+    list = await ticketService.listTodos("gitee", "818309");
+    expect(list[0]?.done).toBeUndefined();
+
+    // 重新派发也视为撤销本地结案
+    getIssueDetail.mockResolvedValue(fakeDetail());
+    await ticketService.completeTicket({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+      done: true,
+      topicId: "topic-x",
+    });
+    const result = await ticketService.dispatchToCeo({
+      provider: "gitee",
+      projectId: "818309",
+      issueKey: "42",
+    });
+    await result.done;
+    list = await ticketService.listTodos("gitee", "818309");
+    expect(list[0]?.done).toBeUndefined();
+  });
+
   it("onTopicDeleted restores the ticket and cleans the board row", async () => {
     getIssueDetail.mockResolvedValue(fakeDetail());
     const result = await ticketService.dispatchToCeo({

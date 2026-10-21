@@ -51,6 +51,7 @@ function toTicket(row: Awaited<ReturnType<typeof api.listTicketTodos>>[number]):
     topicId: row.topicId,
     pipelineStage: row.pipelineStage as TicketItem["pipelineStage"],
     held: row.held,
+    done: row.done,
   };
 }
 
@@ -71,14 +72,16 @@ function toDetail(
 const PROVIDER_STORAGE_KEY = "zy-aos:tickets:provider";
 
 /**
- * 工单是否已完成：流水线走到 completed，或工单系统侧已是终态
- * （已解决/已关闭/已完成/已拒绝）。直接协作链不经过流水线，
- * 终态只能看工单系统状态。
+ * 工单是否已完成：手动结案标记、流水线走到 completed，或工单系统侧已是
+ * 终态（已解决/已关闭/已完成/已拒绝）。直接协作链不经过流水线，
+ * 终态只能看工单系统状态或手动标记。
  */
 export function isTicketDone(ticket: {
+  done?: boolean;
   pipelineStage?: string;
   stateTitle?: string;
 }): boolean {
+  if (ticket.done) return true;
   if (ticket.pipelineStage === "completed") return true;
   const state = (ticket.stateTitle ?? "").trim();
   if (!state || state === "未完成") return false;
@@ -414,6 +417,34 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
         held
           ? `已标记暂不处理：${ticket.ident}（自动派单会跳过）`
           : `已恢复派单：${ticket.ident}`,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "操作失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDoneToggle(ticket: TicketItem) {
+    if (!project) return;
+    const done = !isTicketDone(ticket);
+    setBusy(true);
+    setNotice(null);
+    try {
+      await api.setTicketDone({
+        provider,
+        projectId: project.id,
+        issueKey: ticket.key,
+        done,
+        topicId: ticket.topicId,
+      });
+      setTickets((prev) =>
+        prev.map((t) => (t.key === ticket.key ? { ...t, done: done || undefined } : t)),
+      );
+      setNotice(
+        done
+          ? `已标记完成：${ticket.ident}`
+          : `已撤销完成标记：${ticket.ident}`,
       );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "操作失败");
@@ -800,6 +831,16 @@ export function TicketInbox({ onCollapse }: TicketInboxProps) {
                                     }}
                                   >
                                     {ticket.held ? "恢复派单" : "暂不处理"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() => {
+                                      closeMenu();
+                                      void handleDoneToggle(ticket);
+                                    }}
+                                  >
+                                    {isTicketDone(ticket) ? "撤销完成" : "标记完成"}
                                   </button>
                                   {ticket.url ? (
                                     <button

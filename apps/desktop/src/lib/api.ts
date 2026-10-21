@@ -580,6 +580,7 @@ export const api = {
       topicId?: string;
       pipelineStage?: string;
       held?: boolean;
+      done?: boolean;
     }>
   > {
     const q = options?.all ? "?all=1" : "";
@@ -644,6 +645,24 @@ export const api = {
         projectId: input.projectId,
         issueKey: input.issueKey,
         held: input.held,
+      }),
+    });
+  },
+
+  setTicketDone(input: {
+    provider: TicketProviderId;
+    projectId: string;
+    issueKey: string;
+    done: boolean;
+    topicId?: string;
+  }): Promise<{ done: boolean }> {
+    return request(`/api/tickets/${input.provider}/done`, {
+      method: "POST",
+      body: JSON.stringify({
+        projectId: input.projectId,
+        issueKey: input.issueKey,
+        done: input.done,
+        topicId: input.topicId,
       }),
     });
   },

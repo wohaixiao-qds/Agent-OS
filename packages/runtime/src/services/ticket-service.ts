@@ -7,7 +7,7 @@ import type { ChatService } from "./chat-service.js";
 import type { WorkspaceService } from "./workspace-service.js";
 import { TaskBoardService, boardTaskIdForTicket } from "./task-board-service.js";
 import { TicketDispatchStore, dispatchKey } from "./ticket-dispatches.js";
-import { TicketHoldStore } from "./ticket-holds.js";
+import { TicketFlagStore } from "./ticket-holds.js";
 import type {
   TicketProvider,
   TicketProviderId,
@@ -23,6 +23,8 @@ export type TicketListItem = TicketSummary & {
   pipelineStage?: string;
   /** 手动「暂不处理」：自动派单（定时拉单/串行接单）跳过，直到手工恢复。 */
   held?: boolean;
+  /** 手动「已完成」：agent 未可靠回写工单系统状态时的本地结案标记。 */
+  done?: boolean;
 };
 
 function pathKey(value: string): string {
@@ -31,7 +33,8 @@ function pathKey(value: string): string {
 
 export class TicketService {
   private readonly dispatches: TicketDispatchStore;
-  private readonly holds: TicketHoldStore;
+  private readonly holds: TicketFlagStore;
+  private readonly completions: TicketFlagStore;
   private readonly taskBoard: TaskBoardService;
 
   constructor(
@@ -47,7 +50,8 @@ export class TicketService {
     this.providers = providers;
     this.taskBoard = taskBoard ?? new TaskBoardService(dataDir);
     this.dispatches = new TicketDispatchStore(dataDir);
-    this.holds = new TicketHoldStore(dataDir);
+    this.holds = new TicketFlagStore(dataDir, "ticket-holds.json");
+    this.completions = new TicketFlagStore(dataDir, "ticket-completions.json");
   }
 
   private readonly providers: Partial<
@@ -126,20 +130,23 @@ export class TicketService {
     const provider = this.provider(providerId);
     const todos = await provider.listTodos(projectId, options);
     const state = await this.store.load();
-    const heldKeys = await this.holds.heldKeys();
+    const heldKeys = await this.holds.keys();
+    const doneKeys = await this.completions.keys();
     return Promise.all(
       todos.map(async (todo) => {
         const record = await this.dispatches.find(provider.id, todo.key);
         const topic = record
           ? state.topics.find((t) => t.id === record.topicId)
           : undefined;
+        const key = dispatchKey(provider.id, todo.key);
         return {
           ...todo,
           // 话题已删除（清理/中断）的派单记录不算「已派发」，
           // 定时任务和收件箱把它当新工单重新接手。
           topicId: topic?.id,
           pipelineStage: topic?.pipelineStage,
-          held: heldKeys.has(dispatchKey(provider.id, todo.key)) || undefined,
+          held: heldKeys.has(key) || undefined,
+          done: doneKeys.has(key) || undefined,
         };
       }),
     );
@@ -158,11 +165,35 @@ export class TicketService {
       throw new Error(`${provider.label} 项目不存在: ${input.projectId}`);
     }
     if (input.held) {
-      await this.holds.hold(provider.id, input.issueKey);
+      await this.holds.mark(provider.id, input.issueKey);
     } else {
-      await this.holds.release(provider.id, input.issueKey);
+      await this.holds.unmark(provider.id, input.issueKey);
     }
     return { held: input.held };
+  }
+
+  /**
+   * 手动「已完成」：agent 未把工单系统状态回写成终态时（直接协作链的
+   * 已知缺口），允许本地结案；重新派发或撤回标记即恢复。
+   */
+  async completeTicket(input: {
+    provider: TicketProviderId;
+    projectId: string;
+    issueKey: string;
+    done: boolean;
+    topicId?: string;
+  }): Promise<{ done: boolean }> {
+    const provider = this.provider(input.provider);
+    const project = await provider.getProject(input.projectId);
+    if (!project) {
+      throw new Error(`${provider.label} 项目不存在: ${input.projectId}`);
+    }
+    if (input.done) {
+      await this.completions.mark(provider.id, input.issueKey, input.topicId);
+    } else {
+      await this.completions.unmark(provider.id, input.issueKey);
+    }
+    return { done: input.done };
   }
 
   /**
@@ -172,6 +203,8 @@ export class TicketService {
   async onTopicDeleted(topicId: string): Promise<{ restored: number }> {
     const removed = await this.dispatches.removeByTopicId(topicId);
     await this.taskBoard.removeByTopicId(topicId);
+    await this.holds.removeByTopicId(topicId);
+    await this.completions.removeByTopicId(topicId);
     return { restored: removed.length };
   }
 
@@ -299,8 +332,9 @@ export class TicketService {
       title: `${detail.ident} ${detail.title}`.slice(0, 120),
     });
 
-    // 手工派发视为恢复处理：清掉「暂不处理」标记，避免列表残留误导
-    await this.holds.release(input.provider, input.issueKey);
+    // 手工派发视为恢复处理：清掉「暂不处理」与本地「已完成」，避免列表残留误导
+    await this.holds.unmark(input.provider, input.issueKey);
+    await this.completions.unmark(input.provider, input.issueKey);
 
     // 话题建好就返回，前端立刻切换激活；附图下载等重活后台继续
     // （内网下载可能要几十秒，同步等会把激活和定时拉单都拖住）。
